@@ -1,5 +1,5 @@
-import { ChatBox } from "./components/ChatBox.tsx";
-import { Menu } from "./components/Menu.tsx";
+import { ChatBox } from "./components/ChatBox";
+import { Menu } from "./components/Menu";
 
 function App() {
   return (

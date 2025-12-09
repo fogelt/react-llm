@@ -1,8 +1,8 @@
 import { useState, ChangeEvent } from "react";
 import { Message } from "../types";
-import { streamChatMessage } from "../services/chatService.ts";
-import { MessageList } from "./MessageList.tsx";
-import { ChatInput } from "./ChatInput.tsx";
+import { streamChatMessage } from "../services/chatService";
+import { MessageList } from "./MessageList";
+import { ChatInput } from "./ChatInput";
 
 //Imported in app.tsx
 export function ChatBox() {

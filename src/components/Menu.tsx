@@ -31,6 +31,7 @@ export function Menu() {
       <button className="menu-button" onClick={start}>
         Start model
       </button>
+      <form>llama-server.exe -m "C:\Users\edvin\Downloads\Qwen3VL-4B-Instruct-Q4_K_M.gguf" --ctx-size 1024 --mmproj "C:\Users\edvin\Downloads\mmproj-Qwen3VL-4B-Instruct-Q8_0.gguf"</form>
     </div>
   );
 }

@@ -1,37 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Message } from "../types";
+import { loadChat } from "../services/chatSerializer";
 
-export function Menu() {
-  const [loadedModel, setModel] = useState<string>();
-  const [loadedMmproj, setMmproj] = useState<string>();
+interface MenuProps {
+  onLoadChat: (messages: Message[]) => void;
+}
 
-  const chooseModel = async () => {
-    setModel('')
-  };
+export function Menu({ onLoadChat }: MenuProps) {
+  const [savedChats, setSavedChats] = useState<string[]>([]);
 
-  const chooseMmproj = async () => {
-    setMmproj('')
-  };
+  // Load all chat IDs from localStorage
+  useEffect(() => {
+    const keys = Object.keys(localStorage)
+      .filter((key) => key.startsWith("chat-"))
+      .sort((a, b) => Number(b.split("-")[1]) - Number(a.split("-")[1])); // optional: newest first
+    setSavedChats(keys);
+  }, []);
 
-  const start = async () => {
-
+  const handleLoadChat = (chatId: string) => {
+    const messages = loadChat(chatId);
+    if (messages) onLoadChat(messages); // this updates the ChatBox via App
   };
 
   return (
-    <div className="side-menu">
-      <button className="menu-button" onClick={chooseModel}>
-        Choose model
-      </button>
-      <p>model loaded: {loadedModel}</p>
-
-      <button className="menu-button" onClick={chooseMmproj}>
-        Choose mmproj
-      </button>
-      <p>mmproj loaded: {loadedMmproj}</p>
-
-      <button className="menu-button" onClick={start}>
-        Start model
-      </button>
-      <form>llama-server.exe -m "C:\Users\edvin\Downloads\Qwen3VL-4B-Instruct-Q4_K_M.gguf" --ctx-size 1024 --mmproj "C:\Users\edvin\Downloads\mmproj-Qwen3VL-4B-Instruct-Q8_0.gguf"</form>
+    <div className="side-menu p-4">
+      <p className="font-bold mb-2">Saved Chats</p>
+      <div className="saved-chats-container flex flex-col gap-2">
+        {savedChats.length === 0 && <div className="text-gray-500">No saved chats</div>}
+        {savedChats.map((chatId) => (
+          <button
+            key={chatId}
+            className="saved-chat-button p-2 border rounded hover:bg-gray-200"
+            onClick={() => handleLoadChat(chatId)}
+          >
+            {chatId}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export function Menu({ onLoadChat, onClearChat, saveTrigger }: MenuProps) {
   };
 
   return (
-    <div className="side-menu glass">
+    <div className="glass p-4 w-[20vw] h-[80vh] flex flex-col">
       <p className="font-bold mb-2">Saved Chats</p>
       <div className="flex flex-col gap-2 h-[30vh] w-full glass overflow-y-auto p-2">
         {savedChats.length === 0 && <div className="text-white-500">No saved chats</div>}
@@ -72,7 +72,6 @@ export function Menu({ onLoadChat, onClearChat, saveTrigger }: MenuProps) {
           <span className="material-icons !text-[16px] -translate-y-[0.5px]" aria-hidden>add</span>
         </button>
       </div>
-
     </div>
   );
 }

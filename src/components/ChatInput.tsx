@@ -29,7 +29,7 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
   };
 
   return (
-    <form className="chat-input-container" onSubmit={handleSubmit} aria-label="Chat input form">
+    <form className="flex relative items-center" onSubmit={handleSubmit}>
       <input
         ref={fileInputRef}
         type="file"
@@ -44,7 +44,7 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
         onChange={onChange}
         placeholder="Type your message..."
         disabled={isLoading}
-        className="chat-input glass"
+        className="chat-input glass w-full rounded-[20px] text-base font-sans py-[0.6rem] pr-[3.8rem] pl-[3.6rem]"
         aria-label="Message"
         autoComplete="off"
       />

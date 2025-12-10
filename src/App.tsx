@@ -21,7 +21,7 @@ function App() {
   };
 
   return (
-    <div className="App flex">
+    <div className="min-h-screen flex p-8 px-4 gap-[2.5vw]">
       <Menu
         onLoadChat={handleLoadChat}
         onClearChat={handleClearChat}

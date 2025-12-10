@@ -5,13 +5,17 @@ import { Message } from "./types";
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [saveTrigger, setSaveTrigger] = useState(0);
 
   const handleClearChat = () => {
-    // Set the state back to an empty array of Messages
     setMessages([]);
   };
 
-  // Callback to load messages from Menu
+  const handleChatSaved = () => {
+    // Incrementing the number guarantees a state change, forcing Menu's useEffect to run.
+    setSaveTrigger(prev => prev + 1);
+  }
+
   const handleLoadChat = (loadedMessages: Message[]) => {
     setMessages(loadedMessages);
   };
@@ -21,8 +25,11 @@ function App() {
       <Menu
         onLoadChat={handleLoadChat}
         onClearChat={handleClearChat}
+        saveTrigger={saveTrigger}
       />
-      <ChatBox messages={messages} setMessages={setMessages} />
+      <ChatBox messages={messages}
+        setMessages={setMessages}
+        onChatSaved={handleChatSaved} />
     </div>
   );
 }

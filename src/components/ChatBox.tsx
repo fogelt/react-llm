@@ -8,9 +8,10 @@ import { saveChat } from "../utils/chatSerializer";
 interface ChatBoxProps {
   messages: Message[];
   setMessages: Dispatch<SetStateAction<Message[]>>;
+  onChatSaved: () => void;
 }
 
-export function ChatBox({ messages, setMessages }: ChatBoxProps) {
+export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
   const [input, setInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -29,6 +30,7 @@ export function ChatBox({ messages, setMessages }: ChatBoxProps) {
     setMessages((prev) => {
       const updated = [...prev, userMessage, assistantMessage];
       saveChat(updated);
+      onChatSaved();
       return updated;
     });
 
@@ -42,6 +44,7 @@ export function ChatBox({ messages, setMessages }: ChatBoxProps) {
         const updated = [...prev];
         updated[updated.length - 1] = { ...updated[updated.length - 1], content: assistantResponse };
         saveChat(updated);
+        onChatSaved();
         return updated;
       });
     });
@@ -98,6 +101,7 @@ export function ChatBox({ messages, setMessages }: ChatBoxProps) {
           const updated = [...prev];
           updated[updated.length - 1] = { ...updated[updated.length - 1], content: assistantMessage };
           saveChat(updated);
+          onChatSaved();
           return updated;
         });
       });

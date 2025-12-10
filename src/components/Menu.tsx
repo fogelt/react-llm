@@ -5,9 +5,10 @@ import { loadChat } from "../utils/chatSerializer";
 interface MenuProps {
   onLoadChat: (messages: Message[]) => void;
   onClearChat: () => void;
+  saveTrigger: number;
 }
 
-export function Menu({ onLoadChat, onClearChat }: MenuProps) {
+export function Menu({ onLoadChat, onClearChat, saveTrigger }: MenuProps) {
   const [savedChats, setSavedChats] = useState<string[]>([]);
 
   useEffect(() => {
@@ -15,7 +16,7 @@ export function Menu({ onLoadChat, onClearChat }: MenuProps) {
       .filter((key) => key.startsWith("chat-"))
       .sort((a, b) => Number(b.split("-")[1]) - Number(a.split("-")[1]));
     setSavedChats(keys);
-  }, []);
+  }, [saveTrigger]);
 
   const handleLoadChat = (chatId: string) => {
     const messages = loadChat(chatId);

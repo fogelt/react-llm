@@ -20,7 +20,7 @@ export function ChatBox({ messages, setMessages }: ChatBoxProps) {
     const userMessage: Message = { role: "user", content: input };
     const assistantMessage: Message = { role: "assistant", content: "" };
 
-    setInput(""); //Clear input form
+    setInput(""); //Clear input
     setMessages((prev) => {
       const updated = [...prev, userMessage, assistantMessage];
       saveChat(updated);

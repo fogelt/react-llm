@@ -12,7 +12,12 @@ export function MessageList({ messages }: MessageListProps) {
       ) : (
         messages.map((m, i) => (
           <div key={i} className="message-turn">
-            <div className={`bubble ${m.role === 'user' ? 'user-bubble glass' : 'assistant-bubble glass'}`}>
+            <div
+              className={`bubble glass ${m.role === 'user'
+                ? 'self-end rounded-br'
+                : 'self-start rounded-bl'
+                }`}
+            >
               <div className="bubble-text">{m.content}</div>
             </div>
           </div>

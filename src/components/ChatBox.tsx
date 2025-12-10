@@ -3,7 +3,7 @@ import { Message } from "../types";
 import { streamChatMessage } from "../services/chatService";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
-import { saveChat } from "../services/chatSerializer";
+import { saveChat } from "../utils/chatSerializer";
 
 interface ChatBoxProps {
   messages: Message[];

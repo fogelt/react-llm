@@ -4,7 +4,6 @@ import pdf from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
-import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 
 
@@ -78,53 +77,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Failed to process file' });
   }
-});
-
-let llamaProcess = null;
-const modelsDir = "./models";
-
-app.get("/api/models", (req, res) => {
-  fs.readdir(modelsDir, (err, files) => {
-    if (err) return res.status(500).json({ error: "Failed to read models folder" });
-
-    // Only include .gguf files
-    const models = files.filter(f => f.toLowerCase().endsWith(".gguf"));
-    res.json({ models });
-  });
-});
-
-app.post('/api/start-model', (req, res) => {
-  const { modelPath, mmprojPath, ctxSize } = req.body;
-
-  if (llamaProcess) {
-    return res.status(400).json({ error: 'A model is already running' });
-  }
-
-  const args = [
-    '-m', modelPath,
-    '--ctx-size', ctxSize || '1024',
-    '--mmproj', mmprojPath
-  ];
-
-  llamaProcess = spawn('C:\\path\\to\\llama-server.exe', args, {
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-
-  llamaProcess.stdout.on('data', (data) => console.log(`[LLaMA] ${data}`));
-  llamaProcess.stderr.on('data', (data) => console.error(`[LLaMA ERROR] ${data}`));
-  llamaProcess.on('close', (code) => {
-    console.log(`LLaMA exited with code ${code}`);
-    llamaProcess = null;
-  });
-
-  res.json({ message: 'Model started' });
-});
-
-app.post('/api/stop-model', (req, res) => {
-  if (!llamaProcess) return res.status(400).json({ error: 'No model running' });
-  llamaProcess.kill();
-  llamaProcess = null;
-  res.json({ message: 'Model stopped' });
 });
 
 app.listen(8081, () => console.log('Upload server listening on http://localhost:8081'));

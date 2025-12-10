@@ -66,7 +66,7 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
         {isLoading ? (
           <span className="material-icons !text-[16px] animate-spin" aria-hidden>hourglass_top</span>
         ) : (
-          <span className="material-icons !text-[16px]" aria-hidden>send</span>
+          <span className="material-icons !text-[16px] -translate-x-[-2px] -translate-y-[0.5px]" aria-hidden>send</span>
         )}
       </button>
     </form>

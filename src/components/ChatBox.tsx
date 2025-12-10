@@ -1,4 +1,4 @@
-import { ChangeEvent, Dispatch, SetStateAction, useState } from "react";
+import { ChangeEvent, Dispatch, SetStateAction, useState, useRef, useEffect } from "react";
 import { Message } from "../types";
 import { streamChatMessage } from "../services/chatService";
 import { MessageList } from "./MessageList";
@@ -13,6 +13,11 @@ interface ChatBoxProps {
 export function ChatBox({ messages, setMessages }: ChatBoxProps) {
   const [input, setInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
@@ -106,7 +111,7 @@ export function ChatBox({ messages, setMessages }: ChatBoxProps) {
 
   return (
     <div className="chat-box">
-      <MessageList messages={messages} />
+      <MessageList messages={messages} bottomRef={bottomRef} />
       <ChatInput
         value={input}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}

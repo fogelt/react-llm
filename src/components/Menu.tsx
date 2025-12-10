@@ -25,7 +25,7 @@ export function Menu({ onLoadChat }: MenuProps) {
   return (
     <div className="side-menu glass">
       <p className="font-bold mb-2">Saved Chats</p>
-      <div className="saved-chats-container flex flex-col gap-2 h-[20vh] w-full">
+      <div className="flex flex-col gap-2 h-[30vh] w-full glass overflow-y-auto p-2">
         {savedChats.length === 0 && <div className="text-gray-500">No saved chats</div>}
         {savedChats.map((chatId) => (
           <button

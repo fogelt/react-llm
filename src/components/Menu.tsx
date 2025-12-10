@@ -23,14 +23,14 @@ export function Menu({ onLoadChat }: MenuProps) {
   };
 
   return (
-    <div className="side-menu p-4">
+    <div className="side-menu p-4 glass">
       <p className="font-bold mb-2">Saved Chats</p>
       <div className="saved-chats-container flex flex-col gap-2">
         {savedChats.length === 0 && <div className="text-gray-500">No saved chats</div>}
         {savedChats.map((chatId) => (
           <button
             key={chatId}
-            className="saved-chat-button p-2 border rounded hover:bg-gray-200"
+            className="btn saved-chat-button border rounded"
             onClick={() => handleLoadChat(chatId)}
           >
             {chatId}

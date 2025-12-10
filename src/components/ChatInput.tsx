@@ -30,16 +30,6 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
 
   return (
     <form className="chat-input-container" onSubmit={handleSubmit} aria-label="Chat input form">
-      <button
-        type="button"
-        className="upload-button"
-        onClick={handleUploadClick}
-        aria-label="Upload file"
-        title="Upload file"
-      >
-        <span className="material-icons" aria-hidden>add</span>
-      </button>
-
       <input
         ref={fileInputRef}
         type="file"
@@ -54,21 +44,29 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
         onChange={onChange}
         placeholder="Type your message..."
         disabled={isLoading}
-        className="chat-input"
+        className="chat-input glass"
         aria-label="Message"
         autoComplete="off"
       />
-
+      <button
+        type="button"
+        className="btn circle-button glass left-[10px]"
+        onClick={handleUploadClick}
+        aria-label="Upload file"
+        title="Upload file"
+      >
+        <span className="material-icons !text-[16px]" aria-hidden>add</span>
+      </button>
       <button
         type="submit"
         aria-label="Send message"
         disabled={isLoading || !value.trim()}
-        className="chat-button"
-      >
+        className="btn circle-button glass right-[10px]">
+
         {isLoading ? (
-          <span className="material-icons" aria-hidden>hourglass_top</span>
+          <span className="material-icons !text-[16px]" aria-hidden>hourglass_top</span>
         ) : (
-          <span className="material-icons" aria-hidden>send</span>
+          <span className="material-icons !text-[16px]" aria-hidden>send</span>
         )}
       </button>
     </form>

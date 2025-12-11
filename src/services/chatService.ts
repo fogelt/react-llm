@@ -8,7 +8,7 @@ export const sendChatMessage = async (content: string): Promise<string> => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "Qwen3VL-4B-Instruct-Q4_K_M.gguf",
+        model: "Qwen3VL-2B-Instruct-Q4_K_M.gguf",
         messages: [{ role: "user", content }],
       }),
     });
@@ -29,7 +29,7 @@ export const streamChatMessage = async (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "Qwen3VL-4B-Instruct-Q4_K_M.gguf",
+        model: "Qwen3VL-2B-Instruct-Q4_K_M.gguf",
         messages: messages.map(message => {
           if (message.images?.length) {
             return {

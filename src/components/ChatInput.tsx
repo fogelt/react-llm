@@ -6,9 +6,11 @@ type ChatInputProps = {
   onSend: () => void;
   isLoading?: boolean;
   onUpload?: (file: File) => void;
+  hasAttachment: boolean;
+  onRemoveAttachment?: () => void;
 };
 
-export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload }: ChatInputProps) {
+export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload, hasAttachment, onRemoveAttachment }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -28,6 +30,18 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleLeftButtonClick = () => {
+    if (isLoading) return;
+
+    if (hasAttachment && onRemoveAttachment) {
+      // If there's an attachment, the button removes it
+      onRemoveAttachment();
+    } else {
+      // Otherwise, the button opens the file dialog
+      handleUploadClick();
+    }
+  };
+
   return (
     <form className="flex relative items-center" onSubmit={handleSubmit}>
       <input
@@ -36,31 +50,39 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
         onChange={handleFileChange}
         style={{ display: "none" }}
         aria-hidden
+        accept="image/*, application/pdf"
       />
 
       <input
         type="text"
         value={value}
         onChange={onChange}
-        placeholder="Type your message..."
+        placeholder={hasAttachment ? "Add context or hit Send..." : "Type your message..."}
         disabled={isLoading}
-        className="chat-input glass w-full rounded-[20px] text-base font-sans py-[0.6rem] pr-[3.8rem] pl-[3.6rem]"
+        className={'glass w-full rounded-[20px] text-base font-sans py-[0.6rem] pr-[3.8rem] pl-[3.6rem] pl-4'}
         aria-label="Message"
         autoComplete="off"
       />
+
       <button
         type="button"
-        className="btn circle-button glass left-[10px]"
-        onClick={handleUploadClick}
-        aria-label="Upload file"
-        title="Upload file"
+        className={hasAttachment ? "btn danger circle-button glass left-[10px]" : "btn circle-button glass left-[10px]"}
+        onClick={handleLeftButtonClick}
+        aria-label={hasAttachment ? "Remove attached file" : "Upload file"}
+        title={hasAttachment ? "Remove attached file" : "Upload file"}
+        disabled={isLoading}
       >
-        <span className="material-icons !text-[16px]" aria-hidden>add</span>
+        {hasAttachment ? (
+          <span className="material-icons !text-[16px]" aria-hidden>close</span>
+        ) : (
+          <span className="material-icons !text-[16px]" aria-hidden>add</span>
+        )}
       </button>
+
       <button
         type="submit"
         aria-label="Send message"
-        disabled={isLoading || !value.trim()}
+        disabled={isLoading || (!value.trim() && !hasAttachment)}
         className="btn circle-button glass right-[10px]">
 
         {isLoading ? (

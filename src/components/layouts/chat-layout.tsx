@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { ChatBox } from "./components/ChatBox";
-import { Menu } from "./components/Menu";
-import { Message } from "./types";
+import { ChatBox } from "@/features/chat-box/chat-box";
+import { Menu } from '@/features/side-menu/side-menu';
+import { Message } from "../../types/types";
 
-function App() {
+function ChatLayout() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [saveTrigger, setSaveTrigger] = useState(0);
 
@@ -34,4 +34,4 @@ function App() {
   );
 }
 
-export default App;
+export default ChatLayout;

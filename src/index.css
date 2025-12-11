@@ -12,12 +12,6 @@ body {
   scrollbar-width: none;
 }
 
-*:focus {
-  outline: none;
-  border-color: #67a1ff;
-  box-shadow: 0 0 10px #67a1ff, 0 0 4px #67a1ff, 0 0 5px #962eff;
-}
-
 .glass {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -88,4 +82,10 @@ body {
   font-size: 0.95em;
 
   word-break: break-all;
+}
+
+*:focus {
+  outline: none;
+  border-color: #67a1ff;
+  box-shadow: 0 0 10px #67a1ff, 0 0 4px #67a1ff, 0 0 5px #962eff;
 }

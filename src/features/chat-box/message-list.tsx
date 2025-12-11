@@ -1,4 +1,4 @@
-import { Message } from "../types";
+import { Message } from "@/types/types";
 import { RefObject } from "react";
 import ReactMarkdown from 'react-markdown';
 
@@ -13,16 +13,14 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
       {messages.length === 0 ? (
         <p className="empty-message">No messages yet. Start a conversation!</p>
       ) : (
-        // Start of the expression: The map function is correctly wrapped in parentheses
         messages.map((m, i) => {
-
           const isUser = m.role === 'user';
           const hasAttachmentInMessage = isUser && ((m.images && m.images.length > 0) || m.extraContext);
           const attachmentClasses = hasAttachmentInMessage
             ? 'border-l-4 border-yellow-500 bg-gray-700'
             : '';
 
-          return ( // Explicit return is necessary for map function with block body
+          return (
             <div key={i} className="flex flex-col gap-2 mb-4">
               <div
                 className={`
@@ -39,7 +37,6 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                   </div>
                 )}
 
-                {/* IMAGE PREVIEW */}
                 {m.images && m.images.length > 0 && isUser && (
                   <div className="my-2 border border-gray-600 rounded-md overflow-hidden">
                     <img
@@ -57,7 +54,7 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
               </div>
             </div>
           );
-        }) // End of messages.map
+        })
       )}
       <div ref={bottomRef} />
     </div>

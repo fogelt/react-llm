@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Message } from "../types";
-import { loadChat } from "../utils/chatSerializer";
+import { Message } from "../../types/types";
+import { loadChat } from "@/features/chat-box/chat-serializer";
 
 interface MenuProps {
   onLoadChat: (messages: Message[]) => void;

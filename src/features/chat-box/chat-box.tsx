@@ -1,9 +1,9 @@
 import { ChangeEvent, Dispatch, SetStateAction, useState, useRef, useEffect, useCallback } from "react";
-import { Message } from "../types";
-import { streamChatMessage } from "../services/chatService";
-import { MessageList } from "./MessageList";
-import { ChatInput } from "./ChatInput";
-import { saveChat } from "../utils/chatSerializer";
+import { Message } from "@/types/types";
+import { streamChatMessage } from "./chat-service";
+import { MessageList } from "./message-list";
+import { ChatInput } from "./chat-input";
+import { saveChat } from "@/features/chat-box/chat-serializer"
 
 interface ChatBoxProps {
   messages: Message[];
@@ -22,7 +22,6 @@ export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // --- HELPER: Centralized Streaming Logic (Handles state updates and AI call) ---
   const handleStreamResponse = useCallback(async (userMessage: Message) => {
     const assistantPlaceholder: Message = { role: "assistant", content: "" };
 

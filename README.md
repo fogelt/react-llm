@@ -1,70 +1,35 @@
-# Getting Started with Create React App
+# 🤖 Local LLM Multimodal Chat Application
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is a modern, full-stack application designed for interactive conversation with a **Local Large Language Model (LLM)**, featuring multimodal capabilities that allow users to upload and process files (Images and PDFs) directly within the chat interface.
 
-## Available Scripts
+This architecture is built on three distinct, independently running services:
+1. **React UI (Client):** Runs on Vite's development server (e.g., `localhost:5173`).
+2. **Local LLM Endpoint (API):** Your local LLM server (e.g., Ollama, LM Studio) running on **`localhost:8080`**.
+3. **File Upload Server (Service):** A dedicated Node/Express server for file processing running on **`localhost:8081`**.
 
-In the project directory, you can run:
 
-### `npm start`
+## ✨ Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+* **Local LLM Integration:** Communicates with a local LLM API running on **`http://localhost:8080`**, ensuring privacy and control over the model being used.
+* **Three-Component Architecture:** Clear separation between the UI, file handling logic, and the core LLM inference service.
+* **Multimodal Input:** Ability to upload and process two types of files:
+    * **Images:** Converted to Base64 format and sent to the Local LLM for visual understanding.
+    * **PDFs:** Text content is extracted server-side by the Upload Server (`8081`) and sent as contextual data to the LLM (`8080`) for summarization and querying.
+* **Real-time Chat:** Seamless, streaming responses from the LLM endpoint.
+* **Modern Frontend Stack:** Built with React (using Vite) and styled with Tailwind CSS/PostCSS for a responsive, modern glass-morphism aesthetic.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🚀 Getting Started
 
-### `npm test`
+### Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+You need to have Node.js (v18+), npm, and your **Local LLM Server** (e.g., Llama.cpp) running and configured to expose an API endpoint on **`http://localhost:8080`**.
 
-### `npm run build`
+### Project Setup
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Clone the repository and install the dependencies:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```bash
+git clone <your-repo-url>
+cd llm-site
+npm install
+```

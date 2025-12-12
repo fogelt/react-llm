@@ -55,6 +55,13 @@ body {
   border-radius: 18px;
 }
 
+.normal-button {
+  position: relative;
+  height: 30px;
+  width: 100%;
+  border-radius: 9px;
+}
+
 /* --- CODE BLOCK STYLES --- */
 .bubble-text pre {
   background-color: #171717;

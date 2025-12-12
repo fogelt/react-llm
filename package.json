@@ -24,7 +24,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "start:upload": "node server/upload-server.js",
-    "start:all": "concurrently \"npm run dev\" \"npm run start:upload\""
+    "start:backend": "java -jar java-backend/target/java-backend-0.0.1-SNAPSHOT.jar",
+    "start:all": "concurrently \"npm run dev\" \"npm run start:upload\" \"npm run start:backend\""
   },
   "eslintConfig": {
     "extends": [

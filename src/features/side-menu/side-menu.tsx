@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Message } from "../../types/types";
 import { loadChat } from "@/features/chat-box/chat-serializer";
+import { ModelLoader } from "./features/model-loader"
 
 interface MenuProps {
   onLoadChat: (messages: Message[]) => void;
@@ -41,7 +42,13 @@ export function Menu({ onLoadChat, onClearChat, saveTrigger }: MenuProps) {
 
   return (
     <div className="glass p-4 w-[20vw] h-[80vh] flex flex-col">
-      <p className="font-bold mb-2">Saved Chats</p>
+      <div className="glass p-2 mt-2 mb-2">
+        <button
+          className="btn normal-button glass"
+          onClick={onClearChat}
+        >Ny chatt
+        </button>
+      </div>
       <div className="flex flex-col gap-2 h-[30vh] w-full glass overflow-y-auto p-2">
         {savedChats.length === 0 && <div className="text-white-500">No saved chats</div>}
         {savedChats.map((chatId) => (
@@ -64,14 +71,7 @@ export function Menu({ onLoadChat, onClearChat, saveTrigger }: MenuProps) {
           </div>
         ))}
       </div>
-      <div className="glass p-2 m-4 font-bold mb-2">Ny chatt
-        <button
-          className="btn circle-button glass right-[10px]"
-          onClick={onClearChat}
-        >
-          <span className="material-icons !text-[16px] -translate-y-[0.5px]" aria-hidden>add</span>
-        </button>
-      </div>
+      <ModelLoader />
     </div>
   );
 }

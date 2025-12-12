@@ -1,6 +1,6 @@
 import { Message } from "@/types/types";
 
-const API_URL = "http://localhost:8080/v1/chat/completions";
+const API_URL = "http://localhost:8082/v1/chat/completions";
 
 export const sendChatMessage = async (content: string): Promise<string> => {
   try {
@@ -35,7 +35,7 @@ export const streamChatMessage = async (
             return {
               role: message.role,
               content: [
-                { type: "text", text: "await further instructions, meanwhile take a look at this cool image" },
+                { type: "text", text: "Analyze this image" },
                 { type: "image_url", image_url: { url: message.images?.[0] ?? "" } } // fallback empty string
               ]
             };

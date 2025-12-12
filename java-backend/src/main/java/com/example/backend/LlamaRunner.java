@@ -11,6 +11,7 @@ public class LlamaRunner {
   private Process llamaProcess;
   private String currentModelPath = "";
   private String currentMmprojPath = "";
+  private String currentContextSize = "";
   public final String LLAMA_SERVER_EXE = "llama-server.exe";
   public final String SERVER_PORT = "8082";
 
@@ -34,7 +35,8 @@ public class LlamaRunner {
   }
 
   // Method to start the server with dynamic paths
-  public void startLlama(String modelPath, String mmprojPath) throws IOException, IllegalStateException {
+  public void startLlama(String modelPath, String mmprojPath, String contextSize)
+      throws IOException, IllegalStateException {
     if (isRunning()) {
       throw new IllegalStateException("Llama Server is already running. Please stop it first.");
     }
@@ -47,11 +49,12 @@ public class LlamaRunner {
 
     this.currentModelPath = modelPath;
     this.currentMmprojPath = mmprojPath;
+    this.currentContextSize = contextSize;
 
     ProcessBuilder builder = new ProcessBuilder(
         LLAMA_SERVER_EXE,
         "-m", modelPath,
-        "--ctx-size", "1024",
+        "--ctx-size", contextSize,
         "--mmproj", mmprojPath,
         "--port", SERVER_PORT);
 

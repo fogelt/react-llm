@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 
 const DEFAULT_MODEL_PATH = "C:\\Users\\edvin\\Downloads\\Qwen3-VL-2B-Instruct-Q4_K_M.gguf";
 const DEFAULT_MMPROJ_PATH = "C:\\Users\\edvin\\Downloads\\mmproj-BF16.gguf";
+const DEFAULT_CONTEXT_SIZE = "1024"
 const API_CONFIG_URL = 'http://localhost:8080/api/config/start';
 
 export function ModelLoader() {
   const [modelPath, setModelPath] = useState(DEFAULT_MODEL_PATH);
   const [mmprojPath, setMmprojPath] = useState(DEFAULT_MMPROJ_PATH);
+  const [contextSize, setContextSize] = useState(DEFAULT_CONTEXT_SIZE)
   const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,7 +22,8 @@ export function ModelLoader() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           modelPath: modelPath,
-          mmprojPath: mmprojPath
+          mmprojPath: mmprojPath,
+          contextSize: contextSize
         }),
       });
 
@@ -77,6 +80,15 @@ export function ModelLoader() {
         onChange={(e) => setMmprojPath(e.target.value)}
         className="p-2 text-xs bg-gray-700/50 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder="C:\path\to\mmproj.gguf"
+      />
+
+      <label className="text-sm mb-1 mt-3">Context Size (--ctx-size)</label>
+      <input
+        type="text"
+        value={contextSize}
+        onChange={(e) => setContextSize(e.target.value)}
+        className="p-2 text-xs bg-gray-700/50 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="1024"
       />
 
       <button

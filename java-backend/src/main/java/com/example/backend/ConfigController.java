@@ -23,13 +23,14 @@ public class ConfigController {
     try {
       String modelPath = paths.get("modelPath");
       String mmprojPath = paths.get("mmprojPath");
+      String contextSize = paths.get("contextSize");
 
       if (llamaRunner.isRunning()) {
         // Stop the old one before starting a new one
         llamaRunner.stopLlama();
       }
 
-      llamaRunner.startLlama(modelPath, mmprojPath);
+      llamaRunner.startLlama(modelPath, mmprojPath, contextSize);
       return ResponseEntity.ok("Llama server started successfully on port " + llamaRunner.SERVER_PORT);
 
     } catch (IllegalStateException e) {

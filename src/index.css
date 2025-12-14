@@ -1,26 +1,28 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-body {
-  background-color: #111;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
-  background-size: 20px 20px;
+@layer components {
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border: 1px solid #656565;
+    border-radius: 16px;
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.25),
+      inset 0 0 12px rgba(255, 255, 255, 0.2);
+    opacity: 0.9;
+  }
 }
 
-* {
-  scrollbar-width: none;
-}
-
-.glass {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
-  border: 1px solid #656565;
-  border-radius: 16px;
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.25),
-    inset 0 0 12px rgba(255, 255, 255, 0.2);
-  opacity: 0.9;
+@layer base {
+  body {
+    background-color: #111;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
 }

@@ -1,9 +1,9 @@
 import { ChangeEvent, Dispatch, SetStateAction, useState, useRef, useEffect, useCallback } from "react";
 import { Message } from "@/types/types";
-import { streamChatMessage } from "./chat-service";
-import { MessageList } from "./message-list";
-import { ChatInput } from "./chat-input";
-import { saveChat } from "@/features/chat-box/chat-serializer"
+import { streamChatMessage } from "./features/chat-service";
+import { MessageList } from "./features/message-list";
+import { ChatInput } from "./features/chat-input";
+import { saveChat } from "./features/chat-serializer"
 
 interface ChatBoxProps {
   messages: Message[];

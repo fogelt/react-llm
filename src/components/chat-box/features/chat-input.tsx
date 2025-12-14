@@ -1,4 +1,6 @@
 import { ChangeEvent, FormEvent, useRef } from "react";
+import { CircleButton } from "@/components/ui";
+import { TextInput } from "@/components/ui";
 
 type ChatInputProps = {
   value: string;
@@ -53,44 +55,43 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
         accept="image/*, application/pdf"
       />
 
-      <input
-        type="text"
+      <TextInput
         value={value}
         onChange={onChange}
         placeholder={hasAttachment ? "Add context or hit Send..." : "Type your message..."}
         disabled={isLoading}
-        className={'glass w-full rounded-[20px] text-base font-sans py-[0.6rem] pr-[3.8rem] pl-[3.6rem] pl-4'}
+        className={'pr-[3.8rem] pl-[3.6rem]'}
         aria-label="Message"
-        autoComplete="off"
       />
 
-      <button
+      <CircleButton
         type="button"
-        className={hasAttachment ? "btn danger circle-button glass left-[10px]" : "btn circle-button glass left-[10px]"}
         onClick={handleLeftButtonClick}
         aria-label={hasAttachment ? "Remove attached file" : "Upload file"}
         title={hasAttachment ? "Remove attached file" : "Upload file"}
-        disabled={isLoading}
+        isDestructive={hasAttachment}
+        className="left-[10px]"
       >
         {hasAttachment ? (
           <span className="material-icons !text-[16px]" aria-hidden>close</span>
         ) : (
           <span className="material-icons !text-[16px]" aria-hidden>add</span>
         )}
-      </button>
-
-      <button
+      </CircleButton>
+      <CircleButton
         type="submit"
         aria-label="Send message"
-        disabled={isLoading || (!value.trim() && !hasAttachment)}
-        className="btn circle-button glass right-[10px]">
-
-        {isLoading ? (
-          <span className="material-icons !text-[16px] animate-spin" aria-hidden>hourglass_top</span>
-        ) : (
-          <span className="material-icons !text-[16px] -translate-x-[-2px] -translate-y-[0.5px]" aria-hidden>send</span>
-        )}
-      </button>
+        disabled={!value.trim() && !hasAttachment}
+        className="right-[10px]"
+        isLoading={isLoading}
+      >
+        <span
+          className="material-icons !text-[16px] -translate-x-[-2px] -translate-y-[0.5px]"
+          aria-hidden
+        >
+          send
+        </span>
+      </CircleButton>
     </form>
   );
 }

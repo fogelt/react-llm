@@ -1,6 +1,7 @@
 import { Message } from "@/types/types";
 import { RefObject } from "react";
 import ReactMarkdown from 'react-markdown';
+import { ChatMessage } from "@/components/ui";
 
 type MessageListProps = {
   messages: Message[];
@@ -46,11 +47,7 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                     />
                   </div>
                 )}
-                <div className="bubble-text">
-                  <ReactMarkdown>
-                    {m.content}
-                  </ReactMarkdown>
-                </div>
+                <ChatMessage content={m.content} />
               </div>
             </div>
           );

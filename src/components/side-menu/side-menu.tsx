@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Message } from "../../types/types";
-import { loadChat } from "@/features/chat-box/chat-serializer";
+import { loadChat } from "@/components/chat-box/features/chat-serializer";
 import { ModelLoader } from "./features/model-loader"
+import { RectButton } from "@/components/ui";
+import { CircleButton } from "@/components/ui";
 
 interface MenuProps {
   onLoadChat: (messages: Message[]) => void;
@@ -43,31 +45,35 @@ export function Menu({ onLoadChat, onClearChat, saveTrigger }: MenuProps) {
   return (
     <div className="glass p-4 w-[20vw] h-[80vh] flex flex-col">
       <div className="glass p-2 mt-2 mb-2">
-        <button
-          className="btn normal-button glass"
+        <RectButton
           onClick={onClearChat}
         >Ny chatt
-        </button>
+        </RectButton>
       </div>
       <div className="flex flex-col gap-2 h-[30vh] w-full glass overflow-y-auto p-2">
         {savedChats.length === 0 && <div className="text-white-500">No saved chats</div>}
         {savedChats.map((chatId) => (
           <div className="glass p-2">
             {generateName(chatId)}
-            <button
-              key={chatId}
-              className="btn circle-button glass right-[43px]"
+            <CircleButton
+              type="button"
               onClick={() => handleLoadChat(chatId)}
+              className="right-[43px]"
             >
-              <span className="material-icons !text-[16px] -translate-x-[-1px] -translate-y-[0.5px]" aria-hidden>save</span>
-            </button>
-            <button
-              key={chatId}
-              className="btn danger circle-button glass right-[10px]"
+              <span className="material-icons !text-[16px] -translate-x-[-1px] -translate-y-[0.5px]" aria-hidden>
+                save
+              </span>
+            </CircleButton>
+            <CircleButton
+              type="button"
               onClick={() => handleRemoveChat(chatId)}
+              isDestructive={true}
+              className="right-[10px]"
             >
-              <span className="material-icons !text-[16px] -translate-y-[0.5px]" aria-hidden>delete</span>
-            </button>
+              <span className="material-icons !text-[16px] -translate-y-[0.5px]" aria-hidden>
+                delete
+              </span>
+            </CircleButton>
           </div>
         ))}
       </div>

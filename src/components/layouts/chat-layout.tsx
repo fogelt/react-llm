@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ChatBox } from "@/components/chat-box/chat-box";
-import { Menu } from '@/components/side-menu/side-menu';
+import { ChatBox } from "@/features/chat-box/chat-box";
+import { Menu } from '@/features/side-menu/side-menu';
 import { Message } from "../../types/types";
 
 function ChatLayout() {

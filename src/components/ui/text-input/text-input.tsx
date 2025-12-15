@@ -7,7 +7,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
   ({ className, ...props }, ref) => {
 
     const baseClasses = `
-      glass w-full text-base font-sans py-[0.6rem] pl-4 border-transparent
+      !glass w-full text-base font-sans py-[0.6rem] pl-4 border-transparent
       transition 
       duration-300 
       ease-in-out

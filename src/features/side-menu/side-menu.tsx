@@ -1,7 +1,7 @@
 import { RectButton } from "@/components/ui";
-import { ModelLoader } from "./api/model-loader"
+import { ModelLoader } from "./model-loader/model-loader"
 import { Message } from "@/types";
-import { ChatHistoryList } from "@/features/chat-history/chat-history";
+import { ChatHistoryList } from "@/features/side-menu/chat-history/chat-history";
 
 interface MenuProps {
   onLoadChat: (messages: Message[]) => void;

@@ -1,16 +1,15 @@
 import { Message } from "@/types";
 
+
 let currentChatId: string | null = null;
 
 export function saveChat(messages: Message[], chatId?: string) {
-  if (!chatId && !currentChatId) {
-    currentChatId = generateUID(); // first time we save
-  } else if (chatId) {
+  if (chatId) {
     currentChatId = chatId;
-  }
 
-  localStorage.setItem(`chat-${currentChatId}`, JSON.stringify(messages));
-  return currentChatId;
+    localStorage.setItem(`chat-${currentChatId}`, JSON.stringify(messages));
+    return currentChatId;
+  }
 }
 
 export function loadChat(chatId: string): Message[] | null {
@@ -21,8 +20,4 @@ export function loadChat(chatId: string): Message[] | null {
   } catch {
     return null;
   }
-}
-
-function generateUID() {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
 }

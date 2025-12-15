@@ -5,6 +5,7 @@ import { uploadFile } from "./api/upload-service";
 import { MessageList } from "./components/message-list";
 import { ChatInput } from "./components/chat-input";
 import { saveChat } from "./utils/chat-serializer"
+import { generateUID } from "@/utils";
 
 interface ChatBoxProps {
   messages: Message[];
@@ -26,10 +27,14 @@ export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
   const handleStreamResponse = useCallback(async (userMessage: Message) => {
     const assistantPlaceholder: Message = { role: "assistant", content: "" };
 
+    let chatId: string | undefined = undefined;
+    if (messages.length === 0) {
+      chatId = generateUID();
+    }
     // Add user message and assistant placeholder to chat history
     setMessages((prev) => {
       const updated = [...prev, userMessage, assistantPlaceholder];
-      saveChat(updated);
+      saveChat(updated, chatId);
       onChatSaved();
       return updated;
     });
@@ -46,7 +51,7 @@ export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
           ...updated[updated.length - 1],
           content: assistantResponse
         };
-        saveChat(updated);
+        saveChat(updated, chatId);
         onChatSaved();
         return updated;
       });

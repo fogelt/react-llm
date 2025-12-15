@@ -12,7 +12,7 @@ function authRequestInterceptor(config: InternalAxiosRequestConfig) {
   return config;
 }
 
-// 1. Create the primary Axios instance
+// Create the primary Axios instance
 export const api = Axios.create({
   baseURL: env.PRIMARY_BACKEND_URL,
 });
@@ -20,7 +20,7 @@ export const api = Axios.create({
 
 api.interceptors.request.use(authRequestInterceptor);
 
-// 3. Add the response interceptor (Handles global error messaging and 401 redirection)
+// Add the response interceptor (Handles global error messaging and 401 redirection)
 api.interceptors.response.use(
   (response) => {
     return response.data;

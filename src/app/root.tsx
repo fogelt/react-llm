@@ -1,10 +1,24 @@
-import ChatLayout from '@/components/layouts/chat-layout'
+import React, { Suspense } from 'react';
+
+const LazyChatLayout = React.lazy(() => import('@/components/layouts/chat-layout'));
 
 function App() {
   return (
-    <ChatLayout>
-
-    </ChatLayout>
+    <Suspense
+      fallback={
+        <div style={{
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white'
+        }}>
+          Loading Application...
+        </div>
+      }
+    >
+      <LazyChatLayout />
+    </Suspense>
   );
 }
 

@@ -7,7 +7,7 @@ const BASE_BUTTON_CLASSES = `
     relative h-[30px] w-full rounded-[9px] 
     inline-flex items-center justify-center cursor-pointer 
     rounded-lg text-white transition-all duration-250 ease-in-out
-    border-[1px] border-slate-600
+    border-[0.1rem] border-slate-200
 `;
 
 const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#67a1ff] to-[#962eff]';

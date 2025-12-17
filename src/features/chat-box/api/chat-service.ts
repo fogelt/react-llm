@@ -50,7 +50,8 @@ export const sendChatMessage = async (content: string): Promise<{ content: strin
 export const streamChatMessage = async (
   messages: Message[],
   onChunk: (chunk: string) => void,
-  onMetrics?: (metrics: ChatMetrics) => void
+  onMetrics?: (metrics: ChatMetrics) => void,
+  signal?: AbortSignal
 ): Promise<void> => {
   try {
     let tokenCount = 0;
@@ -80,6 +81,7 @@ export const streamChatMessage = async (
         stream: true,
         stream_options: { include_usage: true } // REQUIRED for usage in stream
       }),
+      signal,
     });
 
     if (!res.ok || !res.body) {

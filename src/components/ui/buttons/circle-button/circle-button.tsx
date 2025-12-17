@@ -5,7 +5,7 @@ const BASE_CIRCLE_CLASSES = `
     h-[30px] w-[30px] p-0 px-[10px] rounded-[10px] 
     inline-flex items-center justify-center cursor-pointer 
     text-white transition-all duration-250 ease-in-out
-    border-[1px] border-slate-600
+    border-[0.1rem] border-slate-200
 `;
 
 const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#67a1ff] to-[#962eff]';

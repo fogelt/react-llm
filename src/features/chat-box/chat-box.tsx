@@ -21,14 +21,26 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit }: Ch
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [metrics, setMetrics] = useState<ChatMetrics | null>(null);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+    }
+  }, []);
+
   const handleStreamResponse = useCallback(async (userMessage: Message) => {
     const assistantPlaceholder: Message = { role: "assistant", content: "" };
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     let chatId: string | undefined = undefined;
     if (messages.length === 0) {
@@ -47,27 +59,35 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit }: Ch
     let assistantResponse = '';
     const messagesForStream = [...messages, userMessage, assistantPlaceholder];
 
-    await streamChatMessage(messagesForStream, (chunk) => {
-      assistantResponse += chunk;
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          content: assistantResponse
-        };
-        saveChat(updated, chatId);
-        onChatSaved();
-        return updated;
-      });
-    }, (newMetrics: ChatMetrics) => {
-      setMetrics((prev) => ({
-        ...newMetrics,
-        totalTokens: newMetrics.totalTokens > 0 ? newMetrics.totalTokens : (prev?.totalTokens || 0) + 1 //Estimates Tokens used
-      }))
-    });
-    setIsLoading(false);
-
-  }, [messages, setMessages, onChatSaved]);
+    try {
+      await streamChatMessage(
+        messagesForStream,
+        (chunk) => {
+          assistantResponse += chunk;
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { ...updated[updated.length - 1], content: assistantResponse };
+            saveChat(updated, chatId);
+            onChatSaved();
+            return updated;
+          });
+        },
+        (newMetrics: ChatMetrics) => {
+          setMetrics((prev) => ({
+            ...newMetrics,
+            totalTokens: newMetrics.totalTokens > 0 ? newMetrics.totalTokens : (prev?.totalTokens || 0) + 1
+          }))
+        },
+        controller.signal
+      );
+    } catch (error: any) {
+      if (error.name === 'AbortError') console.log("Stream stopped by user");
+      else console.error("Stream error:", error);
+    } finally {
+      setIsLoading(false);
+      abortControllerRef.current = null;
+    }
+  }, [messages, setMessages, onChatSaved, contextLimit, metrics]);
 
   const handleFileSelect = (file: File) => {
     setFileToUpload(file);
@@ -140,6 +160,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit }: Ch
         value={input}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
         onSend={handleSubmit}
+        onStop={handleStop}
         isLoading={isLoading}
         onUpload={handleFileSelect}
         hasAttachment={!!fileToUpload}
@@ -147,7 +168,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit }: Ch
       />
       <div className="mt-2 flex items-center gap-2">
         <InfoLabel isActive={isLoading} isLoading={isLoading}>
-          {isLoading ? '' : 'Ready'}
+          {isLoading ? 'Working' : 'Ready'}
         </InfoLabel>
         <ContextBar
           current={metrics?.totalTokens || 0}

@@ -6,18 +6,24 @@ type ChatInputProps = {
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onSend: () => void;
+  onStop?: () => void;
   isLoading?: boolean;
   onUpload?: (file: File) => void;
   hasAttachment: boolean;
   onRemoveAttachment?: () => void;
 };
 
-export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload, hasAttachment, onRemoveAttachment }: ChatInputProps) {
+export function ChatInput({ value, onChange, onSend, onStop, isLoading = false, onUpload, hasAttachment, onRemoveAttachment }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!isLoading && value.trim()) onSend();
+
+    if (isLoading) {
+      onStop?.();
+    } else if (value.trim() || hasAttachment) {
+      onSend();
+    }
   };
 
   const handleUploadClick = () => {
@@ -80,17 +86,16 @@ export function ChatInput({ value, onChange, onSend, isLoading = false, onUpload
       </CircleButton>
       <CircleButton
         type="submit"
-        aria-label="Send message"
-        disabled={!value.trim() && !hasAttachment}
+        aria-label={isLoading ? "Stop generating" : "Send message"}
+        disabled={!isLoading && !value.trim() && !hasAttachment}
         className="right-[10px]"
-        isLoading={isLoading}
+        isDestructive={isLoading}
       >
-        <span
-          className="material-icons !text-[16px] -translate-x-[-2px] -translate-y-[0.5px]"
-          aria-hidden
-        >
-          send
-        </span>
+        {isLoading ? (
+          <span className="material-icons !text-[22px] -translate-y-[0.5px]" aria-hidden>stop</span>
+        ) : (
+          <span className="material-icons !text-[16px] -translate-x-[-1px] -translate-y-[0.5px]" aria-hidden>send</span>
+        )}
       </CircleButton>
     </form>
   );

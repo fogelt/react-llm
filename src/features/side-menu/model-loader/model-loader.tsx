@@ -8,15 +8,18 @@ import { API_ROUTES } from '@/lib/api-routes';
 
 const DEFAULT_MODEL_PATH = "C:\\Users\\edvin\\Downloads\\Qwen3-VL-2B-Instruct-Q4_K_M.gguf";
 const DEFAULT_MMPROJ_PATH = "C:\\Users\\edvin\\Downloads\\mmproj-BF16.gguf";
-const DEFAULT_CONTEXT_SIZE = "1024";
 
 const API_STOP_URL = env.API_URL + API_ROUTES.CONFIG_STOP;
 const POLLING_INTERVAL = 10000;
 
-export function ModelLoader() {
+interface ModelLoaderProps {
+  contextSize: string;
+  setContextSize: (val: string) => void;
+}
+
+export function ModelLoader({ contextSize, setContextSize }: ModelLoaderProps) {
   const [modelPath, setModelPath] = useState(DEFAULT_MODEL_PATH);
   const [mmprojPath, setMmprojPath] = useState(DEFAULT_MMPROJ_PATH);
-  const [contextSize, setContextSize] = useState(DEFAULT_CONTEXT_SIZE);
   const [isLoading, setIsLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 

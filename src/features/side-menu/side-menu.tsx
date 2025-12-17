@@ -7,9 +7,11 @@ interface MenuProps {
   onLoadChat: (messages: Message[]) => void;
   onClearChat: () => void;
   saveTrigger: number;
+  contextSize: string;
+  setContextSize: (val: string) => void;
 }
 
-export function Menu({ onLoadChat, onClearChat, saveTrigger }: MenuProps) {
+export function Menu({ onLoadChat, onClearChat, saveTrigger, contextSize, setContextSize }: MenuProps) {
   return (
     <div className="glass p-4 w-[20vw] h-[80vh] flex flex-col">
       <div className="glass p-2 mt-2 mb-2">
@@ -24,7 +26,10 @@ export function Menu({ onLoadChat, onClearChat, saveTrigger }: MenuProps) {
         saveTrigger={saveTrigger}
       />
 
-      <ModelLoader />
+      <ModelLoader
+        contextSize={contextSize}
+        setContextSize={setContextSize}
+      />
     </div>
   );
 }

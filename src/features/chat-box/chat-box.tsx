@@ -12,9 +12,10 @@ interface ChatBoxProps {
   messages: Message[];
   setMessages: Dispatch<SetStateAction<Message[]>>;
   onChatSaved: () => void;
+  contextLimit: number;
 }
 
-export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
+export function ChatBox({ messages, setMessages, onChatSaved, contextLimit }: ChatBoxProps) {
   const [input, setInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
@@ -150,9 +151,9 @@ export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
         </InfoLabel>
         <ContextBar
           current={metrics?.totalTokens || 0}
-          limit={1024}
+          limit={contextLimit}
         />
-        <InfoLabel variant="gradient">
+        <InfoLabel>
           <span className="text-slate-300 text-[10px] uppercase mr-1">TPS</span>
           {metrics?.tokensPerSecond?.toFixed(2) || '0.00'}
         </InfoLabel>

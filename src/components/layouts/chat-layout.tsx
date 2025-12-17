@@ -6,6 +6,7 @@ import { Message } from "../../types/types";
 function ChatLayout() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [saveTrigger, setSaveTrigger] = useState(0);
+  const [contextSize, setContextSize] = useState("1024");
 
   const handleClearChat = () => {
     setMessages([]);
@@ -26,10 +27,13 @@ function ChatLayout() {
         onLoadChat={handleLoadChat}
         onClearChat={handleClearChat}
         saveTrigger={saveTrigger}
+        contextSize={contextSize}
+        setContextSize={setContextSize}
       />
       <ChatBox messages={messages}
         setMessages={setMessages}
-        onChatSaved={handleChatSaved} />
+        onChatSaved={handleChatSaved}
+        contextLimit={parseInt(contextSize) || 1024} />
     </div>
   );
 }

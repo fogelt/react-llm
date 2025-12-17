@@ -4,6 +4,7 @@ import pdf from 'pdf-parse';
 import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
+import sharp from 'sharp';
 import { fileURLToPath } from 'url';
 
 // __dirname fix for ESM
@@ -57,15 +58,31 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
     // Handle images
     else {
-      const imgBuffer = fs.readFileSync(filePath);
-      const base64 = imgBuffer.toString('base64');
-      res.json({
-        type: 'image',
-        name: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-        base64: `data:${req.file.mimetype};base64,${base64}`
-      });
+      try {
+        //  Process the image with Sharp
+        const processedImageBuffer = await sharp(filePath) //This might be too extreme and lower results on high-end PCs
+          .resize(264, 264, { fit: 'inside' })
+          .flatten({ background: { r: 0, g: 0, b: 0 } }) // Removes transparency if any
+          .jpeg({ quality: 90 }) // Keeps enough detail for the text
+          .toBuffer();
+
+        const base64 = processedImageBuffer.toString('base64');
+        const mimetype = 'image/jpeg';
+
+        console.log(`Original size: ${req.file.size} bytes`);
+        console.log(`New size: ${processedImageBuffer.length} bytes`);
+
+        res.json({
+          type: 'image',
+          name: req.file.originalname,
+          size: processedImageBuffer.length,
+          mimetype: mimetype,
+          base64: `data:${mimetype};base64,${base64}`
+        });
+      } catch (error) {
+        console.error("Image processing failed:", error);
+        res.status(500).json({ error: "Failed to process image" });
+      }
     }
 
     fs.unlink(filePath, (err) => {

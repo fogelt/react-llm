@@ -4,7 +4,7 @@ import { streamChatMessage } from "./api/chat-service";
 import { uploadFile } from "./api/upload-service";
 import { MessageList } from "./components/message-list";
 import { ChatInput } from "./components/chat-input";
-import { saveChat } from "./utils/chat-serializer"
+import { saveChat, getChatId } from "./utils/chat-serializer"
 import { generateUID } from "@/utils";
 
 interface ChatBoxProps {

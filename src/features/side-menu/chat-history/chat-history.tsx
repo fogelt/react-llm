@@ -23,7 +23,6 @@ const generateName = (chatId: string): string => {
 export function ChatHistoryList({ onLoadChat, saveTrigger }: ChatHistoryListProps) {
   const [savedChats, setSavedChats] = useState<string[]>([]);
 
-  // Effect to re-read localStorage keys whenever a chat is saved
   useEffect(() => {
     const keys = Object.keys(localStorage)
       .filter((key) => key.startsWith("chat-"))

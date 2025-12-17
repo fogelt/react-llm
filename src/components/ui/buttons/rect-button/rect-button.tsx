@@ -7,13 +7,12 @@ const BASE_BUTTON_CLASSES = `
     relative h-[30px] w-full rounded-[9px] 
     inline-flex items-center justify-center cursor-pointer 
     rounded-lg text-white transition-all duration-250 ease-in-out
+    border-[1px] border-slate-600
 `;
 
 const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#67a1ff] to-[#962eff]';
-
 const GRADIENT_DESTRUCTIVE = 'bg-gradient-to-br from-[#c9264c] to-[#7b0f31]';
-
-const HOVER_EFFECT = 'hover:brightness-125 hover:border-2 hover:border-white';
+const HOVER_EFFECT = 'hover:brightness-125 hover:border-1 hover:border-white';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;

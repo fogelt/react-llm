@@ -1,28 +1,46 @@
-import { Message } from "@/types/types";
+import { Message } from "@/types";
 import { env } from '@/config/env';
 import { API_ROUTES } from '@/lib/api-routes';
 
 const CHAT_API_URL = env.API_URL + API_ROUTES.CHAT_COMPLETIONS;
 
-export const sendChatMessage = async (content: string): Promise<string> => {
+export interface ChatMetrics {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  tokensPerSecond: number;
+}
+
+export const sendChatMessage = async (content: string): Promise<{ content: string; metrics: ChatMetrics }> => {
   try {
+    const startTime = Date.now(); // Start timer
+
     const res = await fetch(CHAT_API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "Qwen3VL-2B-Instruct-Q4_K_M.gguf",
         messages: [{ role: "user", content }],
       }),
     });
 
-    if (!res.ok) {
-      throw new Error(`API error: ${res.status} ${res.statusText}`);
-    }
-
     const data = await res.json();
-    return (data as any).choices[0].message.content;
+    const endTime = Date.now(); // End timer
+
+    const usage = data.usage;
+    const durationSec = (endTime - startTime) / 1000;
+
+    const tokensPerSecond = usage.completion_tokens / durationSec;
+
+    return {
+      content: data.choices[0].message.content,
+      metrics: {
+        promptTokens: usage.prompt_tokens,
+        completionTokens: usage.completion_tokens,
+        totalTokens: usage.total_tokens,
+        tokensPerSecond: parseFloat(tokensPerSecond.toFixed(2)),
+      }
+    };
   } catch (error) {
     console.error("Error sending message:", error);
     throw error;
@@ -31,9 +49,12 @@ export const sendChatMessage = async (content: string): Promise<string> => {
 
 export const streamChatMessage = async (
   messages: Message[],
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: string) => void,
+  onMetrics?: (metrics: ChatMetrics) => void
 ): Promise<void> => {
   try {
+    let tokenCount = 0;
+    const startTime = Date.now(); // Start timer
     const res = await fetch(CHAT_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -47,6 +68,7 @@ export const streamChatMessage = async (
                 { type: "text", text: "Analyze this image" },
                 { type: "image_url", image_url: { url: message.images?.[0] ?? "" } }
               ]
+
             };
           } else {
             return {
@@ -56,18 +78,15 @@ export const streamChatMessage = async (
           }
         }),
         stream: true,
+        stream_options: { include_usage: true } // REQUIRED for usage in stream
       }),
     });
 
-    if (!res.ok) {
-      throw new Error(`API error: ${res.statusText}`);
+    if (!res.ok || !res.body) {
+      throw new Error(`API error or empty body: ${res.statusText}`);
     }
 
-    const reader = res.body?.getReader();
-    if (!reader) {
-      throw new Error("Response body is not readable");
-    }
-
+    const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
 
@@ -77,28 +96,52 @@ export const streamChatMessage = async (
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-
       buffer = lines.pop() || "";
 
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") break;
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
 
-          try {
-            const json = JSON.parse(data);
-            const chunk = json.choices?.[0]?.delta?.content || "";
-            if (chunk) {
-              onChunk(chunk);
-            }
-          } catch (e) {
-            console.error("Error parsing chunk:", e);
+        if (data === "[DONE]") continue;
+
+        try {
+          const json = JSON.parse(data);
+
+          // Handle Text (if choices[0] exists)
+          const chunk = json.choices?.[0]?.delta?.content || "";
+          if (chunk) {
+            onChunk(chunk);
+
+            // Update live TPS based on local counter
+            tokenCount++;
+            const liveDuration = (Date.now() - startTime) / 1000;
+            onMetrics?.({
+              promptTokens: 0,
+              completionTokens: tokenCount,
+              totalTokens: 0,
+              tokensPerSecond: parseFloat((tokenCount / liveDuration).toFixed(2)),
+            });
           }
-        }
+
+          // Handle Final Usage (Even if choices is empty)
+          if (json.usage) {
+            console.log("Final Metrics Captured:", json.usage);
+
+            // Use the server's own timing if available, or calculate our own
+            const tps = json.timings?.predicted_per_second || (json.usage.completion_tokens / ((Date.now() - startTime) / 1000));
+
+            onMetrics?.({
+              promptTokens: json.usage.prompt_tokens,
+              completionTokens: json.usage.completion_tokens,
+              totalTokens: json.usage.total_tokens,
+              tokensPerSecond: parseFloat(tps.toFixed(2)),
+            });
+          }
+        } catch (e) { /* parse error */ }
       }
     }
   } catch (error) {
-    console.error("Error streaming message:", error);
+    console.error("Error streaming:", error);
     throw error;
   }
 };

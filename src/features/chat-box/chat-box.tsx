@@ -1,11 +1,12 @@
 import { ChangeEvent, Dispatch, SetStateAction, useState, useRef, useEffect, useCallback } from "react";
 import { Message } from "@/types";
-import { streamChatMessage } from "./api/chat-service";
+import { streamChatMessage, type ChatMetrics } from "./api/chat-service";
 import { uploadFile } from "./api/upload-service";
 import { MessageList } from "./components/message-list";
 import { ChatInput } from "./components/chat-input";
-import { saveChat, getChatId } from "./utils/chat-serializer"
+import { saveChat } from "./utils/chat-serializer"
 import { generateUID } from "@/utils";
+import { InfoLabel, ContextBar } from "@/components/ui";
 
 interface ChatBoxProps {
   messages: Message[];
@@ -17,6 +18,7 @@ export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
   const [input, setInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [metrics, setMetrics] = useState<ChatMetrics | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -39,6 +41,7 @@ export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
       return updated;
     });
 
+
     setIsLoading(true);
     let assistantResponse = '';
     const messagesForStream = [...messages, userMessage, assistantPlaceholder];
@@ -55,6 +58,11 @@ export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
         onChatSaved();
         return updated;
       });
+    }, (newMetrics: ChatMetrics) => {
+      setMetrics((prev) => ({
+        ...newMetrics,
+        totalTokens: newMetrics.totalTokens > 0 ? newMetrics.totalTokens : (prev?.totalTokens || 0) + 1 //Estimates Tokens used
+      }))
     });
     setIsLoading(false);
 
@@ -136,6 +144,19 @@ export function ChatBox({ messages, setMessages, onChatSaved }: ChatBoxProps) {
         hasAttachment={!!fileToUpload}
         onRemoveAttachment={handleRemoveAttachment}
       />
+      <div className="mt-2 flex items-center gap-2">
+        <InfoLabel isActive={isLoading} isLoading={isLoading}>
+          {isLoading ? '' : 'Ready'}
+        </InfoLabel>
+        <ContextBar
+          current={metrics?.totalTokens || 0}
+          limit={1024}
+        />
+        <InfoLabel variant="gradient">
+          <span className="text-slate-300 text-[10px] uppercase mr-1">TPS</span>
+          {metrics?.tokensPerSecond?.toFixed(2) || '0.00'}
+        </InfoLabel>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { ChatInput } from "./components/chat-input";
 import { saveChat } from "./utils/chat-serializer"
 import { generateUID } from "@/utils";
 import { InfoLabel, ContextBar } from "@/components/ui";
+import { useError } from "@/errors/error-context";
 
 interface ChatBoxProps {
   messages: Message[];
@@ -18,6 +19,7 @@ interface ChatBoxProps {
 }
 
 export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLoading, setIsLoading }: ChatBoxProps) {
+  const { showError } = useError();
   const [input, setInput] = useState<string>("");
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [metrics, setMetrics] = useState<ChatMetrics | null>(null);
@@ -122,7 +124,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
           images = [data.base64];
 
         } else {
-          alert("File type not supported by the upload server.");
+          showError("File type not supported by the upload server.");
           // The uploadFile service throws a specific error, but we throw again for safety
           throw new Error("Unsupported file type returned by server.");
         }
@@ -146,7 +148,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
     } catch (error) {
       console.error("Submission failed:", error);
       // Use the error message thrown by the service
-      alert(`Submission failed: ${(error as Error).message}`);
+      showError(`Submission failed: ${(error as Error).message}`);
       setIsLoading(false);
     }
   };

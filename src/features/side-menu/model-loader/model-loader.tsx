@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TextInput } from '@/components/ui';
-import { RectButton } from '@/components/ui';
+import { TextInput, RectButton } from '@/components/ui';
 
 import { api } from '@/lib/api-client';
 import { env } from '@/config/env';
 import { API_ROUTES } from '@/lib/api-routes';
+import { useError } from '@/errors/error-context';
 
 const DEFAULT_MODEL_PATH = "C:\\Users\\edvin\\Downloads\\Qwen3-VL-2B-Instruct-Q4_K_M.gguf";
 const DEFAULT_MMPROJ_PATH = "C:\\Users\\edvin\\Downloads\\mmproj-BF16.gguf";
@@ -18,6 +18,7 @@ interface ModelLoaderProps {
 }
 
 export function ModelLoader({ contextSize, setContextSize }: ModelLoaderProps) {
+  const { showError } = useError();
   const [modelPath, setModelPath] = useState(DEFAULT_MODEL_PATH);
   const [mmprojPath, setMmprojPath] = useState(DEFAULT_MMPROJ_PATH);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,8 +48,8 @@ export function ModelLoader({ contextSize, setContextSize }: ModelLoaderProps) {
       // If the API client returns successfully (status 2xx), we know it started.
       setIsRunning(true);
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to start server';
-      window.alert("Server Start Failed: " + message);
+      const message = error.response?.data?.message || 'Make sure the path is correct';
+      showError(`Server Start Failed: ${message}`);
       setIsRunning(false);
     } finally {
       setIsLoading(false);
@@ -61,7 +62,7 @@ export function ModelLoader({ contextSize, setContextSize }: ModelLoaderProps) {
       await api.post(API_ROUTES.CONFIG_STOP, {});
       setIsRunning(false);
     } catch (error) {
-      window.alert("Failed to stop server");
+      showError("Failed to stop server. Please check your connection.");
       setIsRunning(true);
     } finally {
       setIsLoading(false);

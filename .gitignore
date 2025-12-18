@@ -12,6 +12,7 @@
 /build
 dist/
 **/uploads/
+/downloads
 
 # misc
 .vscode

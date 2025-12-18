@@ -2,9 +2,10 @@ import { RectButton } from "@/components/ui";
 import { ModelLoader } from "./model-loader/model-loader"
 import { Message } from "@/types";
 import { ChatHistoryList } from "@/features/side-menu/chat-history/chat-history";
+import { ChatData } from "@/features/chat-box/utils/chat-serializer";
 
 interface MenuProps {
-  onLoadChat: (messages: Message[]) => void;
+  onLoadChat: (chatData: ChatData) => void;
   onClearChat: () => void;
   saveTrigger: number;
   contextSize: string;
@@ -14,7 +15,7 @@ interface MenuProps {
 
 export function Menu({ onLoadChat, onClearChat, saveTrigger, contextSize, setContextSize, isLoading }: MenuProps) {
   return (
-    <div className="glass p-4 w-[20vw] h-[80vh] flex flex-col">
+    <div className="glass p-4 w-[20vw] h-[90vh] flex flex-col">
       <div className="glass p-2 mt-2 mb-2">
         <RectButton
           onClick={onClearChat}
@@ -28,7 +29,6 @@ export function Menu({ onLoadChat, onClearChat, saveTrigger, contextSize, setCon
         saveTrigger={saveTrigger}
         isLoading={isLoading}
       />
-
       <ModelLoader
         contextSize={contextSize}
         setContextSize={setContextSize}

@@ -1,4 +1,5 @@
 com\example\backend\BackendApplication.class
 com\example\backend\ChatController.class
 com\example\backend\LlamaRunner.class
+com\example\backend\ModelDownloader.class
 com\example\backend\ConfigController.class

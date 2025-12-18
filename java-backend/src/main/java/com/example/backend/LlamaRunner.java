@@ -2,101 +2,110 @@ package com.example.backend;
 
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
-
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Service
 public class LlamaRunner {
 
   private Process llamaProcess;
   private String currentModelPath = "";
-  private String currentMmprojPath = "";
-  private String currentContextSize = "";
-  public final String LLAMA_SERVER_EXE = "llama-server.exe";
   public final String SERVER_PORT = "8082";
 
-  public boolean isRunning() {
-    return llamaProcess != null && llamaProcess.isAlive();
+  /**
+   * Helper to detect the OS and return the correct binary name.
+   */
+  private String getBinaryName() {
+    String os = System.getProperty("os.name").toLowerCase();
+    if (os.contains("win")) {
+      return "llama-server.exe";
+    }
+    // Linux and Mac use the same binary name usually
+    return "./llama-server";
   }
 
   public String getCurrentModelPath() {
     return currentModelPath;
   }
 
-  // Method to stop the server
+  public boolean isRunning() {
+    return llamaProcess != null && llamaProcess.isAlive();
+  }
+
   @PreDestroy
   public void stopLlama() {
-    if (llamaProcess != null && llamaProcess.isAlive()) {
+    if (isRunning()) {
       System.out.println("🛑 Stopping Llama Server...");
       llamaProcess.destroyForcibly();
       this.llamaProcess = null;
-      System.out.println("Llama Server stopped.");
     }
   }
 
-  // Method to start the server with dynamic paths
   public void startLlama(String modelPath, String mmprojPath, String contextSize)
       throws IOException, IllegalStateException {
+
     if (isRunning()) {
-      throw new IllegalStateException("Llama Server is already running. Please stop it first.");
+      throw new IllegalStateException("Llama Server is already running.");
     }
 
-    if (modelPath == null || modelPath.isEmpty() || mmprojPath == null || mmprojPath.isEmpty()) {
-      throw new IllegalArgumentException("Model paths cannot be null or empty.");
-    }
+    // Normalize paths using NIO to handle different OS slashes correctly
+    Path normalizedModel = Paths.get(modelPath).toAbsolutePath();
+    Path normalizedMmproj = Paths.get(mmprojPath).toAbsolutePath();
 
-    System.out.println("🚀 Starting Llama Server with Model: " + modelPath);
+    String binary = getBinaryName();
+    System.out.println("🚀 Starting " + binary + " with Model: " + normalizedModel);
 
-    this.currentModelPath = modelPath;
-    this.currentMmprojPath = mmprojPath;
-    this.currentContextSize = contextSize;
+    this.currentModelPath = normalizedModel.toString();
 
+    // ProcessBuilder needs a list of strings
     ProcessBuilder builder = new ProcessBuilder(
-        LLAMA_SERVER_EXE,
-        "-m", modelPath,
+        binary,
+        "-m", currentModelPath,
         "--ctx-size", contextSize,
-        "--mmproj", mmprojPath,
+        "--mmproj", normalizedMmproj.toString(),
         "--port", SERVER_PORT);
+
+    // Crucial: Set the working directory to the folder containing the binary
+    // This ensures it can find its own DLLs/libraries on Windows
+    builder.directory(Paths.get("").toAbsolutePath().toFile());
 
     builder.redirectErrorStream(true);
 
-    this.llamaProcess = builder.start();
-
-    System.out.println("⏳ Waiting for Llama server readiness...");
-    waitForLlamaReadiness(this.llamaProcess);
-
-    // If the method reaches this point, the server is ready
+    try {
+      this.llamaProcess = builder.start();
+      waitForLlamaReadiness(this.llamaProcess);
+    } catch (IOException e) {
+      // This is where your React 'showError' will get the message
+      throw new IOException("Failed to launch " + binary + ". Is it in the root folder? " + e.getMessage());
+    }
   }
 
   private void waitForLlamaReadiness(Process process) throws IOException {
-    // Read the output stream using a standard reader
-    try (var reader = new java.io.BufferedReader(
-        new java.io.InputStreamReader(process.getInputStream()))) {
-
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
       String line;
       final String READY_MESSAGE = "server is listening on";
-      final String ERROR_MESSAGE = "error: failed to load model"; // Common Llama error line
+      final String ERROR_MESSAGE = "error: failed to load model";
 
       while ((line = reader.readLine()) != null) {
         System.out.println("[Llama]: " + line);
 
         if (line.contains(READY_MESSAGE)) {
-          System.out.println("✅ Llama Server is fully ready on port " + SERVER_PORT);
-          return; // Success Return.
+          System.out.println("✅ Llama Server ready on port " + SERVER_PORT);
+          return;
         }
 
         if (line.contains(ERROR_MESSAGE)) {
-          // Throw an error that the ConfigController can catch and return to the user
-          throw new IOException("Llama server failed to start: Invalid model path or format.");
+          stopLlama();
+          throw new IOException("Model failed to load. Check file format/path.");
         }
 
         if (!process.isAlive()) {
-          // If the process exited before sending the ready signal, it failed.
-          throw new IOException("Llama server failed to start without reporting readiness. Check logs.");
+          throw new IOException("Process terminated unexpectedly with exit code: " + process.exitValue());
         }
       }
-
-      throw new IOException("Llama server stream closed prematurely.");
     }
   }
 }

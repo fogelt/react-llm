@@ -6,6 +6,7 @@ import { CircleButton } from "@/components/ui";
 interface ChatHistoryListProps {
   onLoadChat: (messages: Message[]) => void;
   saveTrigger: number;
+  isLoading: boolean;
 }
 
 const generateName = (chatId: string): string => {
@@ -20,7 +21,7 @@ const generateName = (chatId: string): string => {
   return name;
 };
 
-export function ChatHistoryList({ onLoadChat, saveTrigger }: ChatHistoryListProps) {
+export function ChatHistoryList({ onLoadChat, saveTrigger, isLoading }: ChatHistoryListProps) {
   const [savedChats, setSavedChats] = useState<string[]>([]);
 
   useEffect(() => {
@@ -51,8 +52,9 @@ export function ChatHistoryList({ onLoadChat, saveTrigger }: ChatHistoryListProp
             type="button"
             onClick={() => handleLoadChat(chatId)}
             className="right-[43px] absolute top-1/2 -translate-y-1/2"
+            isDisabled={isLoading}
           >
-            <span className="material-icons !text-[16px] -translate-x-[-1px] -translate-y-[0.5px]" aria-hidden>
+            <span className="material-icons !text-[16px] -translate-y-[0.5px]" aria-hidden>
               save
             </span>
           </CircleButton>
@@ -63,7 +65,7 @@ export function ChatHistoryList({ onLoadChat, saveTrigger }: ChatHistoryListProp
             className="right-[10px] absolute top-1/2 -translate-y-1/2"
           >
             <span className="material-icons !text-[16px] -translate-y-[0.5px]" aria-hidden>
-              delete
+              close
             </span>
           </CircleButton>
         </div>

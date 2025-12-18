@@ -1,4 +1,4 @@
-const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#67a1ff] to-[#962eff]';
+const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#10b981] to-[#059669]';
 
 export function ContextBar({ current, limit }: { current: number; limit: number }) {
   const percentage = Math.min((current / limit) * 100, 100);
@@ -11,7 +11,7 @@ export function ContextBar({ current, limit }: { current: number; limit: number 
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <div className="flex justify-between text-[10px] text-slate-400 uppercase font-bold mt-1 tracking-wider">
+      <div className="flex justify-between text-[10px] text-slate-300 uppercase font-bold mt-1 tracking-wider">
         <span>Context Usage</span>
         <span>{current} / {limit}</span>
       </div>

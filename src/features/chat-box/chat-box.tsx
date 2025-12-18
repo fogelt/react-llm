@@ -13,11 +13,12 @@ interface ChatBoxProps {
   setMessages: Dispatch<SetStateAction<Message[]>>;
   onChatSaved: () => void;
   contextLimit: number;
+  isLoading: boolean;
+  setIsLoading: Dispatch<SetStateAction<boolean>>;
 }
 
-export function ChatBox({ messages, setMessages, onChatSaved, contextLimit }: ChatBoxProps) {
+export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLoading, setIsLoading }: ChatBoxProps) {
   const [input, setInput] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [metrics, setMetrics] = useState<ChatMetrics | null>(null);
 
@@ -87,7 +88,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit }: Ch
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [messages, setMessages, onChatSaved, contextLimit, metrics]);
+  }, [messages, setMessages, onChatSaved, contextLimit, metrics, setIsLoading]);
 
   const handleFileSelect = (file: File) => {
     setFileToUpload(file);
@@ -175,8 +176,12 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit }: Ch
           limit={contextLimit}
         />
         <InfoLabel>
-          <span className="text-slate-300 text-[10px] uppercase mr-1">TPS</span>
-          {metrics?.tokensPerSecond?.toFixed(2) || '0.00'}
+          <span className="text-slate-300 text-[10px] uppercase mr-1">
+            TPS
+          </span>
+          <span className="text-emerald-300">
+            {metrics?.tokensPerSecond?.toFixed(2) ?? '0.00'}
+          </span>
         </InfoLabel>
       </div>
     </div>

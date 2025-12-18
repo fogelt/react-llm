@@ -92,7 +92,7 @@ export function ChatInput({ value, onChange, onSend, onStop, isLoading = false, 
         isDestructive={isLoading}
       >
         {isLoading ? (
-          <span className="material-icons !text-[22px] -translate-y-[0.5px]" aria-hidden>stop</span>
+          <span className="material-icons !text-[22px] -translate-x-[-1px]" aria-hidden>stop</span>
         ) : (
           <span className="material-icons !text-[16px] -translate-x-[-1px] -translate-y-[0.5px]" aria-hidden>send</span>
         )}

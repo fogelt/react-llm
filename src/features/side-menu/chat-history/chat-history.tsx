@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
-import { Message } from "@/types/types";
-import { loadChat } from "@/features/chat-box/utils/chat-serializer";
+import { loadChat, ChatData } from "@/features/chat-box/utils/chat-serializer";
 import { CircleButton } from "@/components/ui";
 
 interface ChatHistoryListProps {
-  onLoadChat: (messages: Message[]) => void;
+  onLoadChat: (chatData: ChatData) => void;
   saveTrigger: number;
   isLoading: boolean;
 }
 
 const generateName = (chatId: string): string => {
-  const messages: Message[] | null = loadChat(chatId);
+  const data = loadChat(chatId);
   const maxLength = 20;
-  const rawContent = messages?.find((m) => m.role === "user")?.content.trim() ?? 'Untitled Chat';
+
+  const rawContent = data?.messages?.find((m) => m.role === "user")?.content.trim() ?? 'Untitled Chat';
 
   let name = rawContent;
   if (name.length > maxLength) {
@@ -31,9 +31,11 @@ export function ChatHistoryList({ onLoadChat, saveTrigger, isLoading }: ChatHist
     setSavedChats(keys);
   }, [saveTrigger]);
 
-  const handleLoadChat = (chatId: string) => {
-    const messages = loadChat(chatId);
-    if (messages) onLoadChat(messages);
+  const handleLoadChat = (id: string) => {
+    const chatData = loadChat(id);
+    if (chatData) {
+      onLoadChat(chatData); // This triggers handleLoadChat in ChatLayout
+    }
   };
 
   const handleRemoveChat = (chatId: string) => {

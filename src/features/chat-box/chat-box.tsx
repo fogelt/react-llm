@@ -6,7 +6,7 @@ import { MessageList } from "./components/message-list";
 import { ChatInput } from "./components/chat-input";
 import { saveChat } from "./utils/chat-serializer"
 import { generateUID } from "@/utils";
-import { InfoLabel, ContextBar } from "@/components/ui";
+import { InfoLabel, ProgressBar } from "@/components/ui";
 import { useError } from "@/errors/error-context";
 
 interface ChatBoxProps {
@@ -14,11 +14,13 @@ interface ChatBoxProps {
   setMessages: Dispatch<SetStateAction<Message[]>>;
   onChatSaved: () => void;
   contextLimit: number;
+  contextUsage: number;
+  setContextUsage: (val: number) => void;
   isLoading: boolean;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
 }
 
-export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLoading, setIsLoading }: ChatBoxProps) {
+export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLoading, setIsLoading, contextUsage, setContextUsage }: ChatBoxProps) {
   const { showError } = useError();
   const [input, setInput] = useState<string>("");
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
@@ -52,7 +54,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
     // Add user message and assistant placeholder to chat history
     setMessages((prev) => {
       const updated = [...prev, userMessage, assistantPlaceholder];
-      saveChat(updated, chatId);
+      saveChat(updated, contextUsage, chatId);
       onChatSaved();
       return updated;
     });
@@ -70,7 +72,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
           setMessages((prev) => {
             const updated = [...prev];
             updated[updated.length - 1] = { ...updated[updated.length - 1], content: assistantResponse };
-            saveChat(updated, chatId);
+            saveChat(updated, contextUsage, chatId);
             onChatSaved();
             return updated;
           });
@@ -79,18 +81,27 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
           setMetrics((prev) => ({
             ...newMetrics,
             totalTokens: newMetrics.totalTokens > 0 ? newMetrics.totalTokens : (prev?.totalTokens || 0) + 1
-          }))
+          }));
+
+          if (newMetrics.totalTokens > 0) {
+            setContextUsage(newMetrics.totalTokens);
+            setMessages((currentMessages) => {
+              saveChat(currentMessages, newMetrics.totalTokens, chatId);
+              return currentMessages;
+            });
+          }
         },
         controller.signal
       );
     } catch (error: any) {
       if (error.name === 'AbortError') console.log("Stream stopped by user");
-      else console.error("Stream error:", error);
+      else showError(`${error}`);
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [messages, setMessages, onChatSaved, contextLimit, metrics, setIsLoading]);
+    // Added showError, contextUsage, and setContextUsage to dependencies
+  }, [messages, setMessages, onChatSaved, contextLimit, setIsLoading, showError, contextUsage, setContextUsage]);
 
   const handleFileSelect = (file: File) => {
     setFileToUpload(file);
@@ -125,11 +136,8 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
 
         } else {
           showError("File type not supported by the upload server.");
-          // The uploadFile service throws a specific error, but we throw again for safety
           throw new Error("Unsupported file type returned by server.");
         }
-
-        // Construct final user message with combined data
         userMessage = {
           role: "user",
           content: userMessageContent,
@@ -146,9 +154,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
       await handleStreamResponse(userMessage);
 
     } catch (error) {
-      console.error("Submission failed:", error);
-      // Use the error message thrown by the service
-      showError(`Submission failed: ${(error as Error).message}`);
+      showError(`${(error as Error).message}`);
       setIsLoading(false);
     }
   };
@@ -173,8 +179,9 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
         <InfoLabel isActive={isLoading} isLoading={isLoading}>
           {isLoading ? 'Working' : 'Ready'}
         </InfoLabel>
-        <ContextBar
-          current={metrics?.totalTokens || 0}
+        <ProgressBar
+          // If we are loading, show the live metrics. If not, show the saved prop.
+          current={isLoading ? (metrics?.totalTokens || 0) : contextUsage}
           limit={contextLimit}
         />
         <InfoLabel>

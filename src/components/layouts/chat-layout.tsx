@@ -1,25 +1,28 @@
 import { useState } from "react";
 import { ChatBox } from "@/features/chat-box/chat-box";
 import { Menu } from '@/features/side-menu/side-menu';
-import { Message } from "../../types/types";
+import { Message } from "@/types";
+import { ChatData } from "@/features/chat-box/utils/chat-serializer";
 
 function ChatLayout() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [contextUsage, setContextUsage] = useState(0);
   const [saveTrigger, setSaveTrigger] = useState(0);
   const [contextSize, setContextSize] = useState("1024");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleClearChat = () => {
     setMessages([]);
+    setContextUsage(0);
   };
 
   const handleChatSaved = () => {
-    // Incrementing the number guarantees a state change, forcing Menu's useEffect to run.
     setSaveTrigger(prev => prev + 1);
   }
 
-  const handleLoadChat = (loadedMessages: Message[]) => {
-    setMessages(loadedMessages);
+  const handleLoadChat = (chatData: ChatData) => {
+    setMessages(chatData.messages);
+    setContextUsage(chatData.contextUsage || 0);
   };
 
   return (
@@ -35,6 +38,8 @@ function ChatLayout() {
       <ChatBox messages={messages}
         setMessages={setMessages}
         onChatSaved={handleChatSaved}
+        contextUsage={contextUsage}
+        setContextUsage={setContextUsage}
         contextLimit={parseInt(contextSize) || 1024}
         isLoading={isLoading}
         setIsLoading={setIsLoading}

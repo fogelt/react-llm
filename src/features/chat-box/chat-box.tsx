@@ -27,7 +27,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [isLoading]);
+  }, [isLoading]); //Scroll down when Loading changes gives us scroll both on start and end :)
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {

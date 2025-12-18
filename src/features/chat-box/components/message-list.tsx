@@ -17,9 +17,6 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
           const isUser = m.role === 'user';
           const hasAttachmentInMessage = isUser && ((m.images && m.images.length > 0) || m.extraContext);
           const attachmentClasses = hasAttachmentInMessage
-            ? 'border-l-4 border-yellow-500 bg-gray-700'
-            : '';
-
           return (
             <div key={i} className="flex flex-col gap-2 mb-4">
               <div
@@ -31,7 +28,7 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                 `}
               >
                 {hasAttachmentInMessage && (
-                  <div className="text-xs text-yellow-400 mb-1 flex items-center gap-1">
+                  <div className="text-xs mb-1 flex items-center gap-1">
                     <span className="material-icons !text-[14px]">attach_file</span>
                     Attachment
                   </div>

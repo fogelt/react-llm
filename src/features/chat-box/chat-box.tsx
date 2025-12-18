@@ -27,7 +27,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [isLoading]);
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {

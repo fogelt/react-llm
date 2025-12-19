@@ -13,6 +13,8 @@
 dist/
 **/uploads/
 /downloads
+.pnp.*
+.yarn
 
 # misc
 .vscode

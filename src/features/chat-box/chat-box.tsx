@@ -18,9 +18,10 @@ interface ChatBoxProps {
   setContextUsage: (val: number) => void;
   isLoading: boolean;
   setIsLoading: Dispatch<SetStateAction<boolean>>;
+  activeChatId: string | undefined;
 }
 
-export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLoading, setIsLoading, contextUsage, setContextUsage }: ChatBoxProps) {
+export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLoading, setIsLoading, contextUsage, setContextUsage, activeChatId }: ChatBoxProps) {
   const { showError } = useError();
   const [input, setInput] = useState<string>("");
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
@@ -47,8 +48,9 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    let chatId: string | undefined = undefined;
-    if (messages.length === 0) {
+    setMetrics(null);
+    let chatId = activeChatId;
+    if (!chatId && messages.length === 0) {
       chatId = generateUID();
     }
     // Add user message and assistant placeholder to chat history
@@ -58,7 +60,6 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
       onChatSaved();
       return updated;
     });
-
 
     setIsLoading(true);
     let assistantResponse = '';
@@ -78,10 +79,15 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
           });
         },
         (newMetrics: ChatMetrics) => {
-          setMetrics((prev) => ({
-            ...newMetrics,
-            totalTokens: newMetrics.totalTokens > 0 ? newMetrics.totalTokens : (prev?.totalTokens || 0) + 1
-          }));
+          setMetrics((prev) => {
+            const baseValue = prev ? prev.totalTokens : contextUsage;
+            return {
+              ...newMetrics,
+              totalTokens: newMetrics.totalTokens > 0
+                ? newMetrics.totalTokens
+                : baseValue + 1
+            };
+          });
 
           if (newMetrics.totalTokens > 0) {
             setContextUsage(newMetrics.totalTokens);
@@ -180,8 +186,8 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
           {isLoading ? 'Working' : 'Ready'}
         </InfoLabel>
         <ProgressBar
-          // If we are loading, show the live metrics. If not, show the saved prop.
-          current={isLoading ? (metrics?.totalTokens || 0) : contextUsage}
+          // If we have live metrics > 0, use those. Otherwise, stay with the last known contextUsage.
+          current={(isLoading && metrics?.totalTokens) ? metrics.totalTokens : contextUsage}
           limit={contextLimit}
         />
         <InfoLabel>

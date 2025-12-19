@@ -5,7 +5,7 @@ import { ChatHistoryList } from "@/features/side-menu/chat-history/chat-history"
 import { ChatData } from "@/features/chat-box/utils/chat-serializer";
 
 interface MenuProps {
-  onLoadChat: (chatData: ChatData) => void;
+  onLoadChat: (chatData: ChatData, id: string) => void;
   onClearChat: () => void;
   saveTrigger: number;
   contextSize: string;

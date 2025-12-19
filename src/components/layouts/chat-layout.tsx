@@ -10,19 +10,22 @@ function ChatLayout() {
   const [saveTrigger, setSaveTrigger] = useState(0);
   const [contextSize, setContextSize] = useState("1024");
   const [isLoading, setIsLoading] = useState(false);
+  const [activeChatId, setActiveChatId] = useState<string | undefined>(undefined);
 
   const handleClearChat = () => {
     setMessages([]);
     setContextUsage(0);
+    setActiveChatId(undefined);
   };
 
   const handleChatSaved = () => {
     setSaveTrigger(prev => prev + 1);
   }
 
-  const handleLoadChat = (chatData: ChatData) => {
+  const handleLoadChat = (chatData: ChatData, id: string) => {
     setMessages(chatData.messages);
     setContextUsage(chatData.contextUsage || 0);
+    setActiveChatId(id);
   };
 
   return (
@@ -43,6 +46,7 @@ function ChatLayout() {
         contextLimit={parseInt(contextSize) || 1024}
         isLoading={isLoading}
         setIsLoading={setIsLoading}
+        activeChatId={activeChatId}
       />
     </div>
   );

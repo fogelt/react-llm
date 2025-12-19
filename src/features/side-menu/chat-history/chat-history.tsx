@@ -3,7 +3,7 @@ import { loadChat, ChatData } from "@/features/chat-box/utils/chat-serializer";
 import { CircleButton } from "@/components/ui";
 
 interface ChatHistoryListProps {
-  onLoadChat: (chatData: ChatData) => void;
+  onLoadChat: (chatData: ChatData, chatId: string) => void;
   saveTrigger: number;
   isLoading: boolean;
 }
@@ -34,7 +34,7 @@ export function ChatHistoryList({ onLoadChat, saveTrigger, isLoading }: ChatHist
   const handleLoadChat = (id: string) => {
     const chatData = loadChat(id);
     if (chatData) {
-      onLoadChat(chatData); // This triggers handleLoadChat in ChatLayout
+      onLoadChat(chatData, id);
     }
   };
 

@@ -1,35 +1,56 @@
-# 🤖 Local LLM Multimodal Chat Application
-
-This project is a modern, full-stack application designed for interactive conversation with a **Local Large Language Model (LLM)**, featuring multimodal capabilities that allow users to upload and process files (Images and PDFs) directly within the chat interface.
-
-This architecture is built on three distinct, independently running services:
-1. **React UI (Client):** Runs on Vite's development server (e.g., `localhost:5173`).
-2. **Local LLM Endpoint (API):** Your local LLM server (e.g., Ollama, LM Studio) running on **`localhost:8080`**.
-3. **File Upload Server (Service):** A dedicated Node/Express server for file processing running on **`localhost:8081`**.
+An all-in-one WebUI for running local Large Language Models (LLMs) with ease.
 
 
-## ✨ Features
 
-* **Local LLM Integration:** Communicates with a local LLM API running on **`http://localhost:8080`**, ensuring privacy and control over the model being used.
-* **Three-Component Architecture:** Clear separation between the UI, file handling logic, and the core LLM inference service.
-* **Multimodal Input:** Ability to upload and process two types of files:
-    * **Images:** Converted to Base64 format and sent to the Local LLM for visual understanding.
-    * **PDFs:** Text content is extracted server-side by the Upload Server (`8081`) and sent as contextual data to the LLM (`8080`) for summarization and querying.
-* **Real-time Chat:** Seamless, streaming responses from the LLM endpoint.
-* **Modern Frontend Stack:** Built with React (using Vite) and styled with Tailwind CSS/PostCSS for a responsive, modern glass-morphism aesthetic.
+## 🚀 Overview
+This repository provides a complete stack for local AI interaction. It includes a modern **React + Vite** frontend and a specialized **Java-backend** that manages curated model downloads and execution.
 
-## 🚀 Getting Started
+* **Frontend:** React 19, TailwindCSS, Lucide Icons.
+* **Upload Server:** Node.js/Express for document processing (PDF, Images).
+* **Model Engine:** Java-based backend for model orchestration.
+
+---
+
+## 🛠️ Getting Started
 
 ### Prerequisites
+* **Node.js** (v18+)
+* **Yarn**
+* **Java JRE/JDK** (for the model backend)
 
-You need to have Node.js (v18+), npm, and your **Local LLM Server** (e.g., Llama.cpp) running and configured to expose an API endpoint on **`http://localhost:8080`**.
+### Installation
+1. **Clone the repo:**
+   ```bash
+   git clone <your-repo-url>
+   cd llm-site
+   ```
 
-### Project Setup
+2. **Install dependencies:**
+   ```bash
+   yarn install
+   ```
 
-Clone the repository and install the dependencies:
+---
+
+## ⚡ Running the App
+
+To launch the frontend, the upload server, and the Java backend simultaneously:
 
 ```bash
-git clone <your-repo-url>
-cd llm-site
-npm install
+yarn start:all
 ```
+
+### Available Scripts
+| Command | Description |
+| :--- | :--- |
+| `yarn dev` | Starts the Vite development server |
+| `yarn start:upload` | Starts the Node.js file processing server |
+| `yarn start:backend` | Launches the Java-backend model handler |
+| `yarn start:all` | Runs all of the above concurrently |
+
+---
+
+## 📦 Tech Stack
+* **UI:** React 19, Vite, TailwindCSS
+* **Backend:** Java (Model Management), Express (File Uploads)
+* **Processing:** PDF-parse, Sharp (Image processing), Zod (Validation)

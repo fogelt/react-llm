@@ -45,7 +45,7 @@ export function ChatHistoryList({ onLoadChat, saveTrigger, isLoading }: ChatHist
 
   return (
     <div className="flex flex-col gap-2 h-[30vh] w-full glass overflow-y-auto p-2">
-      {savedChats.length === 0 && <div className="text-white-500">No saved chats</div>}
+      {savedChats.length === 0 && <div className="text-[11px] font-bold text-slate-300/50 mb-1.5 ml-1 uppercase tracking-widest">No saved chats</div>}
 
       {savedChats.map((chatId) => (
         <div key={chatId} className="glass p-2 relative">

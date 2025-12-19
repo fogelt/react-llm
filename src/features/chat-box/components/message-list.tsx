@@ -11,7 +11,7 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
   return (
     <div className="glass mb-4 overflow-y-auto p-4 rounded-lg w-[75vw] h-[80vh]">
       {messages.length === 0 ? (
-        <p className="empty-message">No messages yet. Start a conversation!</p>
+        <p className="text-[11px] font-bold text-slate-300/50 mb-1.5 ml-1 uppercase tracking-widest">No messages yet. Start a conversation!</p>
       ) : (
         messages.map((m, i) => {
           const isUser = m.role === 'user';

@@ -92,8 +92,7 @@ public class ConfigController {
       return ResponseEntity.status(HttpStatus.CONFLICT)
           .body(Map.of("message", e.getMessage()));
     } catch (IOException e) {
-      // Internal Error (500) - This will be caught by your ErrorProvider
-      // It provides the specific binary error from LlamaRunner
+      // provides the specific binary error from LlamaRunner
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body(Map.of("message", "Backend Error: " + e.getMessage()));
     }
@@ -112,5 +111,11 @@ public class ConfigController {
         "modelPath", llamaRunner.getCurrentModelPath(),
         "os", System.getProperty("os.name") // Useful for frontend debugging
     );
+  }
+
+  @PostMapping("/heartbeat")
+  public ResponseEntity<Void> heartbeat() {
+    llamaRunner.resetHeartbeat();
+    return ResponseEntity.ok().build();
   }
 }

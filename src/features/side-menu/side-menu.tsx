@@ -1,7 +1,6 @@
 import { RectButton } from "@/components/ui";
-import { ModelLoader } from "./model-loader/model-loader"
-import { Message } from "@/types";
-import { ChatHistoryList } from "@/features/side-menu/chat-history/chat-history";
+import { ModelLoader } from "./components/model-loader"
+import { ChatHistoryList } from "@/features/side-menu/components/chat-history";
 import { ChatData } from "@/features/chat-box/utils/chat-serializer";
 
 interface MenuProps {

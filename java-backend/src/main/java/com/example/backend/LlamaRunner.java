@@ -1,12 +1,17 @@
 package com.example.backend;
 
 import jakarta.annotation.PreDestroy;
+
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class LlamaRunner {
@@ -14,10 +19,15 @@ public class LlamaRunner {
   private Process llamaProcess;
   private String currentModelPath = "";
   public final String SERVER_PORT = "8082";
+  private final AtomicLong lastHeartbeat = new AtomicLong(System.currentTimeMillis());
+  private final long TIMEOUT_MS = 15000;
 
-  /**
-   * Helper to detect the OS and return the correct binary name.
-   */
+  public void resetHeartbeat() {
+    long now = System.currentTimeMillis();
+    lastHeartbeat.set(now);
+  }
+
+  // Helper to detect the OS and return the correct binary name.
   private String getBinaryName() {
     String os = System.getProperty("os.name").toLowerCase();
     if (os.contains("win")) {
@@ -44,6 +54,19 @@ public class LlamaRunner {
     }
   }
 
+  @Scheduled(fixedDelay = 5000)
+  public void checkWatchdog() {
+    if (isRunning()) {
+      long now = System.currentTimeMillis();
+      long elapsed = now - lastHeartbeat.get();
+
+      if (elapsed > TIMEOUT_MS) {
+        System.out.println("🚨 WATCHDOG TRIGGERED: No heartbeat detected for " + (elapsed / 1000) + "s.");
+        stopLlama();
+      }
+    }
+  }
+
   public void startLlama(String modelPath, String mmprojPath, String contextSize)
       throws IOException, IllegalStateException {
 
@@ -51,35 +74,39 @@ public class LlamaRunner {
       throw new IllegalStateException("Llama Server is already running.");
     }
 
-    // Normalize paths using NIO to handle different OS slashes correctly
     Path normalizedModel = Paths.get(modelPath).toAbsolutePath();
-    Path normalizedMmproj = Paths.get(mmprojPath).toAbsolutePath();
-
-    String binary = getBinaryName();
-    System.out.println("🚀 Starting " + binary + " with Model: " + normalizedModel);
-
     this.currentModelPath = normalizedModel.toString();
+    String binary = getBinaryName();
 
-    // ProcessBuilder needs a list of strings
-    ProcessBuilder builder = new ProcessBuilder(
-        binary,
-        "-m", currentModelPath,
-        "--ctx-size", contextSize,
-        "--mmproj", normalizedMmproj.toString(),
-        "--port", SERVER_PORT);
+    List<String> command = new ArrayList<>();
+    command.add(binary);
+    command.add("-m");
+    command.add(currentModelPath);
+    command.add("--ctx-size");
+    command.add(contextSize);
+    command.add("--port");
+    command.add(SERVER_PORT);
 
-    // Crucial: Set the working directory to the folder containing the binary
-    // This ensures it can find its own DLLs/libraries on Windows
+    // Only add vision projector if a path was actually provided
+    if (mmprojPath != null && !mmprojPath.isBlank()) {
+      Path normalizedMmproj = Paths.get(mmprojPath).toAbsolutePath();
+      command.add("--mmproj");
+      command.add(normalizedMmproj.toString());
+      System.out.println("Vision enabled with: " + normalizedMmproj);
+    } else {
+      System.out.println("Text-only mode (No vision projector)");
+    }
+
+    ProcessBuilder builder = new ProcessBuilder(command);
     builder.directory(Paths.get("").toAbsolutePath().toFile());
-
     builder.redirectErrorStream(true);
 
     try {
       this.llamaProcess = builder.start();
+      resetHeartbeat();
       waitForLlamaReadiness(this.llamaProcess);
     } catch (IOException e) {
-      // This is where your React 'showError' will get the message
-      throw new IOException("Failed to launch " + binary + ". Is it in the root folder? " + e.getMessage());
+      throw new IOException("Failed to launch " + binary + ": " + e.getMessage());
     }
   }
 

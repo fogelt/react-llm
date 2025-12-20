@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TextInput, RectButton, Dropdown, ProgressBar } from '@/components/ui';
+import { RangeSlider, RectButton, Dropdown, ProgressBar } from '@/components/ui';
 import { modelService } from '../api/model-service';
 import { CURATED_MODELS } from '@/config/curated-models';
 import { useError } from '@/errors/error-context';
@@ -108,9 +108,7 @@ export function ModelLoader({ contextSize, setContextSize }: ModelLoaderProps) {
     checkServerStatus();
 
     const intervalId = setInterval(async () => {
-      // 1. Check if server is still running
       await checkServerStatus();
-      // 2. If running, send the keep-alive signal via the service
       if (isRunning) {
         try {
           await modelService.sendHeartbeat();
@@ -127,14 +125,11 @@ export function ModelLoader({ contextSize, setContextSize }: ModelLoaderProps) {
     <div className="flex flex-col mt-4 p-4 glass">
       <div className="flex justify-between items-center mb-1">
         <h3 className="font-bold">Model Configuration</h3>
-        <button onClick={refreshFiles} className="text-[10px] text-slate-300 font-bold uppercase">
-          <span className="material-icons !text-[16px] -translate-x-[5px]" aria-hidden>refresh</span>
-        </button>
       </div>
 
-      <div className="mt-2 pl-2 pb-2 rounded-lg glass border border-white/10">
+      <div className="mt-2 pl-2 pb-2 glass">
         <label className="text-[10px] uppercase text-slate-300 font-bold">Quick Download</label>
-        <div className="flex flex-col gap-2 mt-1 items-start">
+        <div className="flex flex-col gap-2 my-1 items-start">
           {CURATED_MODELS.map(m => {
             const isDownloaded = availableFiles.includes(m.file) && (!m.mmproj || availableFiles.includes(m.mmproj));
             return (
@@ -153,7 +148,7 @@ export function ModelLoader({ contextSize, setContextSize }: ModelLoaderProps) {
                 <span className="flex items-center gap-1.5">
                   {isDownloaded ? (
                     <>
-                      <span className="material-icons !text-[16px] text-emerald-400 -translate-x-[5px]" aria-hidden>download_done</span>
+                      <span className="material-icons !text-[16px] text-emerald-300 -translate-x-[5px]" aria-hidden>download_done</span>
                       <span className="text-slate-300">{m.name}</span>
                     </>
                   ) : (
@@ -173,15 +168,15 @@ export function ModelLoader({ contextSize, setContextSize }: ModelLoaderProps) {
       <Dropdown label="Vision Projector" value={mmprojFile} setValue={setMmprojFile} options={availableFiles} />
 
       {!isDownloading && (
-        <>
-          <label className="mb-1 mt-4 text-[11px] font-bold text-slate-300 mb-1.5 ml-1 uppercase tracking-widest">Context Size</label>
-          <TextInput
-            type="text"
-            value={contextSize}
-            onChange={(e) => setContextSize(e.target.value)}
-            className="p-2 text-xs bg-gray-700/50 !rounded-[10px]"
-          />
-        </>
+        <RangeSlider
+          label="Context Size"
+          value={contextSize}
+          min={1024}
+          max={32768}
+          step={1024}
+          disabled={isRunning || isLoading}
+          onChange={(val) => setContextSize(val)}
+        />
       )}
 
       {isDownloading && (

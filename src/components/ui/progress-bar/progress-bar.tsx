@@ -1,4 +1,4 @@
-const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#10b981] to-[#059669]';
+const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#6ee7b7] to-[#10b981]';
 
 interface ProgressBarProps {
   current: number;

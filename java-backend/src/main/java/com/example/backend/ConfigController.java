@@ -9,7 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import jakarta.ws.rs.Path; // Keep this one for the @Path annotation
+import jakarta.ws.rs.Path;
 
 @Path("/api/config")
 public class ConfigController {
@@ -50,7 +50,6 @@ public class ConfigController {
   @Path("/files")
   @Produces(MediaType.APPLICATION_JSON)
   public Response listAvailableFiles() {
-    // Explicitly use java.nio.file.Path here to avoid conflict with @Path
     java.nio.file.Path downloadPath = Paths.get("downloads");
     try {
       if (!Files.exists(downloadPath))

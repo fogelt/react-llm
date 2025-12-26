@@ -1,8 +1,9 @@
 import { Message } from "@/types";
 import { env } from '@/config/env';
 import { API_ROUTES } from '@/lib/api-routes';
+import { availableTools } from '@/config/available-tools'
 
-const CHAT_API_URL = env.API_URL + API_ROUTES.CHAT_COMPLETIONS;
+const CHAT_API_URL = env.API_URL;
 
 export interface ChatMetrics {
   promptTokens: number;
@@ -78,6 +79,8 @@ export const streamChatMessage = async (
             };
           }
         }),
+        tools: availableTools,
+        tool_choice: "auto",
         stream: true,
         stream_options: { include_usage: true } // REQUIRED for usage in stream
       }),
@@ -101,19 +104,22 @@ export const streamChatMessage = async (
       buffer = lines.pop() || "";
 
       for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const data = line.slice(6).trim();
+        // 1. Rensa raden och hoppa över om den är tom
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
 
-        if (data === "[DONE]") continue;
+        // 2. Extrahera JSON-delen oavsett hur många "data:"-prefix som finns
+        // Detta fixar "data:data: {" felet
+        const jsonString = trimmedLine.replace(/^data:\s*/g, '').replace(/^data:\s*/g, '').trim();
+
+        if (!jsonString || jsonString === "[DONE]") continue;
 
         try {
-          const json = JSON.parse(data);
-
-          // Handle Text (if choices[0] exists)
+          const json = JSON.parse(jsonString);
           const chunk = json.choices?.[0]?.delta?.content || "";
+
           if (chunk) {
             onChunk(chunk);
-
             // Update live TPS based on local counter
             tokenCount++;
             const liveDuration = (Date.now() - startTime) / 1000;

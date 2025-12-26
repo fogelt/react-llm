@@ -7,6 +7,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.util.Map;
+import io.smallrye.mutiny.Multi;
 
 @Path("/v1")
 @RegisterRestClient(configKey = "chat-api")
@@ -16,5 +17,11 @@ public interface ChatExternalService {
   @Path("/chat/completions")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  String getChatCompletion(Map<String, Object> payload);
+  Map<String, Object> getChatCompletion(Map<String, Object> payload);
+
+  @POST
+  @Path("/chat/completions")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.SERVER_SENT_EVENTS)
+  Multi<String> streamChatCompletion(Map<String, Object> payload);
 }

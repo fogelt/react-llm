@@ -1,5 +1,8 @@
 C:\Users\edvin\source\repos\llm-site\java-backend\src\main\java\com\example\backend\BackendApplication.java
+C:\Users\edvin\source\repos\llm-site\java-backend\src\main\java\com\example\backend\ChatController.java
 C:\Users\edvin\source\repos\llm-site\java-backend\src\main\java\com\example\backend\ChatExternalService.java
 C:\Users\edvin\source\repos\llm-site\java-backend\src\main\java\com\example\backend\ConfigController.java
 C:\Users\edvin\source\repos\llm-site\java-backend\src\main\java\com\example\backend\LlamaRunner.java
 C:\Users\edvin\source\repos\llm-site\java-backend\src\main\java\com\example\backend\ModelDownloader.java
+C:\Users\edvin\source\repos\llm-site\java-backend\src\main\java\com\example\backend\ToolExecutor.java
+C:\Users\edvin\source\repos\llm-site\java-backend\src\main\java\com\example\backend\ToolRegistry.java

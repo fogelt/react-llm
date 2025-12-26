@@ -1,5 +1,4 @@
-const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#6ee7b7] to-[#10b981]';
-
+const GRADIENT_DEFAULT = 'bg-gradient-to-br from-[#34d399] to-[#10b981]';
 interface RangeSliderProps {
   label: string;
   value: string | number;
@@ -23,15 +22,12 @@ export function RangeSlider({ label, value, min, max, step = 512, disabled, onCh
       </div>
 
       <div className="relative h-6 flex items-center">
-        {/* Track */}
         <div className="absolute h-1.5 w-full glass overflow-hidden rounded-full">
           <div
             className={`h-full ${GRADIENT_DEFAULT} transition-all duration-150`}
             style={{ width: `${percentage}%` }}
           />
         </div>
-
-        {/* Input */}
         <input
           type="range"
           min={min}
@@ -60,7 +56,7 @@ export function RangeSlider({ label, value, min, max, step = 512, disabled, onCh
       <div className="flex justify-between items-center text-[9px] text-slate-400 uppercase font-bold -mt-1 px-1">
         <span className="w-12 text-left">{min.toLocaleString()}</span>
 
-        <span className="text-[11px] text-emerald-300 font-mono tracking-wider">
+        <span className="text-[11px] text-slate-300 font-mono tracking-wider">
           {numericValue.toLocaleString()}
         </span>
 

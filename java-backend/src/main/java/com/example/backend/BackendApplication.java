@@ -1,17 +1,12 @@
 package com.example.backend;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import io.quarkus.runtime.Quarkus;
+import io.quarkus.runtime.annotations.QuarkusMain;
 
-@SpringBootApplication
-@EnableAsync
-@EnableScheduling
+@QuarkusMain
 public class BackendApplication {
 
-  public static void main(String[] args) {
-    SpringApplication.run(BackendApplication.class, args);
+  public static void main(String... args) {
+    Quarkus.run(args);
   }
-
 }

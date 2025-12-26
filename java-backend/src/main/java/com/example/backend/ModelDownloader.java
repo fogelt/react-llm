@@ -1,7 +1,8 @@
 package com.example.backend;
 
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
@@ -14,7 +15,7 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Service
+@ApplicationScoped
 public class ModelDownloader {
 
   private final Map<String, Integer> downloadProgress = new ConcurrentHashMap<>();
@@ -23,8 +24,18 @@ public class ModelDownloader {
     return downloadProgress.getOrDefault(fileName, 0);
   }
 
-  @Async
   public void downloadGguf(String repo, String fileName, String targetFolder) {
+    Uni.createFrom().item(() -> {
+      performDownload(repo, fileName, targetFolder);
+      return null;
+    })
+        .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+        .subscribe().with(
+            item -> System.out.println("Download started for: " + fileName),
+            failure -> System.err.println("Critical failure: " + failure.getMessage()));
+  }
+
+  private void performDownload(String repo, String fileName, String targetFolder) {
     String url = String.format("https://huggingface.co/%s/resolve/main/%s", repo, fileName);
 
     try {
@@ -42,9 +53,7 @@ public class ModelDownloader {
 
       HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
-      // Handle non-OK status codes (401, 403, 404, etc)
       if (response.statusCode() != 200) {
-        System.err.println("Download failed for " + fileName + ": HTTP " + response.statusCode());
         downloadProgress.put(fileName, -response.statusCode());
         return;
       }
@@ -67,13 +76,8 @@ public class ModelDownloader {
           }
         }
       }
-
-      // Set to 100 explicitly so the frontend knows we are done
       downloadProgress.put(fileName, 100);
-      System.out.println("Download complete: " + fileName);
-
     } catch (Exception e) {
-      System.err.println("Error downloading " + fileName + ": " + e.getMessage());
       downloadProgress.put(fileName, -500);
     }
   }

@@ -1,9 +1,9 @@
 package com.example.backend;
 
-import jakarta.annotation.PreDestroy;
-
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.scheduler.Scheduled;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-@Service
+@ApplicationScoped
 public class LlamaRunner {
 
   private Process llamaProcess;
@@ -23,17 +23,14 @@ public class LlamaRunner {
   private final long TIMEOUT_MS = 15000;
 
   public void resetHeartbeat() {
-    long now = System.currentTimeMillis();
-    lastHeartbeat.set(now);
+    lastHeartbeat.set(System.currentTimeMillis());
   }
 
-  // Helper to detect the OS and return the correct binary name.
   private String getBinaryName() {
     String os = System.getProperty("os.name").toLowerCase();
     if (os.contains("win")) {
       return "llama-server.exe";
     }
-    // Linux and Mac use the same binary name usually
     return "./llama-server";
   }
 
@@ -45,8 +42,7 @@ public class LlamaRunner {
     return llamaProcess != null && llamaProcess.isAlive();
   }
 
-  @PreDestroy
-  public void stopLlama() {
+  public void stopLlama(@Observes ShutdownEvent ev) {
     if (isRunning()) {
       System.out.println("🛑 Stopping Llama Server...");
       llamaProcess.destroyForcibly();
@@ -54,15 +50,13 @@ public class LlamaRunner {
     }
   }
 
-  @Scheduled(fixedDelay = 5000)
+  @Scheduled(every = "5s")
   public void checkWatchdog() {
     if (isRunning()) {
-      long now = System.currentTimeMillis();
-      long elapsed = now - lastHeartbeat.get();
-
+      long elapsed = System.currentTimeMillis() - lastHeartbeat.get();
       if (elapsed > TIMEOUT_MS) {
         System.out.println("🚨 WATCHDOG TRIGGERED: No heartbeat detected for " + (elapsed / 1000) + "s.");
-        stopLlama();
+        stopLlama(null);
       }
     }
   }
@@ -87,14 +81,11 @@ public class LlamaRunner {
     command.add("--port");
     command.add(SERVER_PORT);
 
-    // Only add vision projector if a path was actually provided
     if (mmprojPath != null && !mmprojPath.isBlank()) {
       Path normalizedMmproj = Paths.get(mmprojPath).toAbsolutePath();
       command.add("--mmproj");
       command.add(normalizedMmproj.toString());
       System.out.println("Vision enabled with: " + normalizedMmproj);
-    } else {
-      System.out.println("Text-only mode (No vision projector)");
     }
 
     ProcessBuilder builder = new ProcessBuilder(command);
@@ -113,24 +104,18 @@ public class LlamaRunner {
   private void waitForLlamaReadiness(Process process) throws IOException {
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
       String line;
-      final String READY_MESSAGE = "server is listening on";
-      final String ERROR_MESSAGE = "error: failed to load model";
-
       while ((line = reader.readLine()) != null) {
         System.out.println("[Llama]: " + line);
-
-        if (line.contains(READY_MESSAGE)) {
+        if (line.contains("server is listening on")) {
           System.out.println("✅ Llama Server ready on port " + SERVER_PORT);
           return;
         }
-
-        if (line.contains(ERROR_MESSAGE)) {
-          stopLlama();
-          throw new IOException("Model failed to load. Check file format/path.");
+        if (line.contains("error: failed to load model")) {
+          stopLlama(null);
+          throw new IOException("Model failed to load.");
         }
-
         if (!process.isAlive()) {
-          throw new IOException("Process terminated unexpectedly with exit code: " + process.exitValue());
+          throw new IOException("Process died with exit code: " + process.exitValue());
         }
       }
     }

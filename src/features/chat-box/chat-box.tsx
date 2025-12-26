@@ -63,7 +63,7 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
 
     setIsLoading(true);
     let assistantResponse = '';
-    const messagesForStream = [...messages, userMessage, assistantPlaceholder];
+    const messagesForStream = [...messages, userMessage];
 
     try {
       await streamChatMessage(
@@ -97,7 +97,14 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
             });
           }
         },
-        controller.signal
+        controller.signal,
+        () => {
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { ...updated[updated.length - 1], usedTool: true };
+            return updated;
+          });
+        }
       );
     } catch (error: any) {
       if (error.name === 'AbortError') console.log("Stream stopped by user");

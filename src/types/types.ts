@@ -3,4 +3,5 @@ export type Message = {
   content: string;
   extraContext?: string;
   images?: string[];
+  usedTool?: boolean;
 };

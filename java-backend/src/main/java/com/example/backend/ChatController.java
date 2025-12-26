@@ -44,7 +44,6 @@ public class ChatController {
 
     // 2. HANTERA VERKTYG
     if (toolCalls != null && !toolCalls.isEmpty()) {
-      System.out.println("!!! VERKTYG DETEKTERAT !!!");
 
       // Vi utgår från första verktygsanropet
       Map<String, Object> toolCall = toolCalls.get(0);
@@ -62,7 +61,15 @@ public class ChatController {
 
       // Nu när vi har tool-datat, streama det slutgiltiga svaret
       payload.put("stream", true);
-      return formatStream(externalService.streamChatCompletion(payload));
+      String toolMarker = "data: {\"choices\":[{\"delta\":{\"used_tool\":true}}]}\n\n";
+
+      // Hämta den faktiska strömmen från Llama
+      Multi<String> aiStream = formatStream(externalService.streamChatCompletion(payload));
+
+      // Slå ihop dem: Först markören, sen AI-svaret
+      return Multi.createBy().concatenating().streams(
+          Multi.createFrom().item(toolMarker),
+          aiStream);
     }
 
     // 3. VANLIGT PRAT (Inga verktyg)

@@ -3,7 +3,7 @@ export const availableTools = [
     type: "function",
     function: {
       name: "get_system_info",
-      description: "Get the local machine's OS and Java version",
+      description: "Hämtar systeminformation, aktuell tid och användarens geografiska plats",
       parameters: {
         type: "object",
         properties: {}
@@ -13,13 +13,14 @@ export const availableTools = [
   {
     type: "function",
     function: {
-      name: "list_local_files",
-      description: "List GGUF files in the downloads folder",
+      name: "web_search",
+      description: "Använd denna för att söka efter information på internet som du inte känner till, t.ex. dagsaktuella händelser eller specifika fakta.",
       parameters: {
         type: "object",
         properties: {
-          folder: { type: "string", description: "The folder to scan" }
-        }
+          query: { type: "string", description: "Sökfrasen på svenska eller engelska" }
+        },
+        required: ["query"]
       }
     }
   }

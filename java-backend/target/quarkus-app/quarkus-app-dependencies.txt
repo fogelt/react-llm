@@ -142,6 +142,7 @@ org.jboss.logmanager:jboss-logmanager::jar:3.0.6.Final
 org.jboss.slf4j:slf4j-jboss-logmanager::jar:2.0.0.Final
 org.jboss.threads:jboss-threads::jar:3.6.1.Final
 org.jctools:jctools-core::jar:4.0.5
+org.jsoup:jsoup::jar:1.17.2
 org.reactivestreams:reactive-streams::jar:1.0.4
 org.slf4j:slf4j-api::jar:2.0.6
 org.wildfly.common:wildfly-common::jar:1.7.0.Final

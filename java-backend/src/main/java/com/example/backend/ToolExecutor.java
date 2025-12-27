@@ -34,7 +34,6 @@ public class ToolExecutor {
 
         if ("get_system_info".equals(functionName)) {
           String result = registry.get_system_info(args);
-          // Qwen expects the result wrapped in tool_response tags
           return "<|tool_response|>\n" + result + "\n<|tool_response|>";
         }
 

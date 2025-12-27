@@ -52,7 +52,7 @@ export const streamChatMessage = async (
   onChunk: (chunk: string) => void,
   onMetrics?: (metrics: ChatMetrics) => void,
   signal?: AbortSignal,
-  onToolUsed?: () => void
+  onToolUsed?: () => void,
 ): Promise<void> => {
   try {
     let tokenCount = 0;

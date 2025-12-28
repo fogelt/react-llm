@@ -31,7 +31,7 @@ public class LlamaRunner {
     if (os.contains("win")) {
       return "llama-server.exe";
     }
-    return "./llama-server";
+    return "llama-server";
   }
 
   public String getCurrentModelPath() {

@@ -23,12 +23,14 @@
     "zod": "^4.1.13"
   },
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
+    "dev:host": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
     "start:upload": "node server/upload-server.js",
     "start:backend": "java -Dquarkus.http.host=0.0.0.0 -jar java-backend/target/quarkus-app/quarkus-run.jar",
     "start:all": "concurrently \"npm run dev\" \"npm run start:upload\" \"npm run start:backend\"",
+    "host:all": "concurrently \"npm run dev:host\" \"npm run start:upload\" \"npm run start:backend\"",
     "postinstall": "node -e \"const fs = require('fs'); if (!fs.existsSync('.env')) { fs.copyFileSync('.env-example', '.env'); console.log('.env file created successfully'); }\""
   },
   "eslintConfig": {

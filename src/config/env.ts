@@ -1,22 +1,22 @@
 import * as z from 'zod';
 
 const EnvSchema = z.object({
-  PRIMARY_BACKEND_URL: z.string().url(),
-  API_URL: z.string().url(),
-  UPLOAD_SERVER_URL: z.string().url(),
+  JAVA_API_PORT: z.string().default('8080'),
+  UPLOAD_SERVER_PORT: z.string().default('8081'),
 
   ENABLE_API_MOCKING: z
     .string()
     .refine((s) => s === 'true' || s === 'false')
     .transform((s) => s === 'true')
-    .optional(),
+    .default(false),
+
   APP_URL: z.string().url().optional().default('http://localhost:3000'),
-  APP_MOCK_API_PORT: z.string().optional().default('8080'),
 });
 
-// This is the structure that createEnv MUST return
-type EnvType = z.infer<typeof EnvSchema>;
-
+type EnvType = z.infer<typeof EnvSchema> & {
+  PRIMARY_BACKEND_URL: string;
+  UPLOAD_SERVER_URL: string;
+};
 
 const createEnv = (): EnvType => {
   const envVars = Object.entries(import.meta.env).reduce<
@@ -29,34 +29,20 @@ const createEnv = (): EnvType => {
     return acc;
   }, {});
 
-  const parsedEnv = EnvSchema.safeParse(envVars);
+  const parsed = EnvSchema.safeParse(envVars);
 
-  if (!parsedEnv.success) {
-    const treeifiedError = z.treeifyError(parsedEnv.error);
-
-    const fieldErrors = treeifiedError.properties;
-
-    // If properties exists, we iterate through it. If not, we fall back to generic errors.
-    const errorDetails = fieldErrors
-      ? Object.entries(fieldErrors)
-        .map(([k, v]) => {
-          const errors = v?.errors || [];
-          return errors.length > 0 ? `- ${k}: ${errors.join(', ')}` : null;
-        })
-        .filter((item) => item !== null)
-        .join('\n')
-      : `Generic Error: ${treeifiedError.errors.join(', ')}`;
-
-
-    throw new Error(
-      `Invalid env provided.
-The following variables are missing or invalid:
-${errorDetails}
-`,
-    );
+  if (!parsed.success) {
+    throw new Error(`Invalid environment variables: ${JSON.stringify(parsed.error.format(), null, 2)}`);
   }
 
-  return parsedEnv.data;
+  // Dynamic Host Detection
+  const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+
+  return {
+    ...parsed.data,
+    PRIMARY_BACKEND_URL: `http://${currentHost}:${parsed.data.JAVA_API_PORT}`,
+    UPLOAD_SERVER_URL: `http://${currentHost}:${parsed.data.UPLOAD_SERVER_PORT}`,
+  };
 };
 
 export const env = createEnv();

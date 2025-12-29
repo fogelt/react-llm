@@ -1,8 +1,9 @@
 import { Message } from "@/types";
 import { env } from '@/config/env';
+import { API_ROUTES } from "@/lib/api-routes";
 import { availableTools } from '@/config/available-tools'
 
-const CHAT_API_URL = env.API_URL;
+const CHAT_API_URL = env.PRIMARY_BACKEND_URL + API_ROUTES.ACCESS_CHAT;
 
 export interface ChatMetrics {
   promptTokens: number;

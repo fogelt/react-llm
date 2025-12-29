@@ -1,4 +1,5 @@
 export const API_ROUTES = {
+  ACCESS_CHAT: '/api/chat',
   CHAT_COMPLETIONS: '/v1/chat/completions',
   CONFIG_START: '/api/config/start',
   CONFIG_STATUS: '/api/config/status',

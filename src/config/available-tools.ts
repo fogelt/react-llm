@@ -3,7 +3,7 @@ export const availableTools = [
     type: "function",
     function: {
       name: "get_system_info",
-      description: "Hämtar systeminformation, aktuell tid och användarens geografiska plats",
+      description: "Retrieves system information, current time, and the user's geographical location.",
       parameters: {
         type: "object",
         properties: {}
@@ -14,11 +14,14 @@ export const availableTools = [
     type: "function",
     function: {
       name: "web_search",
-      description: "Använd denna för att söka efter information på internet som du inte känner till, t.ex. dagsaktuella händelser eller specifika fakta.",
+      description: "Use this to search for information on the internet that you are not aware of, such as current events or specific facts.",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Sökfrasen på svenska eller engelska" }
+          query: {
+            type: "string",
+            description: "The search query in English or Swedish"
+          }
         },
         required: ["query"]
       }

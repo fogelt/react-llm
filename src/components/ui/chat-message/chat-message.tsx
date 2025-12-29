@@ -1,5 +1,8 @@
 import ReactMarkdown from 'react-markdown';
 import React from 'react';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css'; // Required for math symbols to render
 
 interface ChatMessageProps {
   content: string;
@@ -8,7 +11,7 @@ interface ChatMessageProps {
 const PreRenderer: React.FC<React.PropsWithChildren<any>> = ({ children }) => (
   <pre
     className={`
-      bg-[#171717] text-[#f8f8f2] border border-white rounded-md p-3 my-2 overflow-x-auto 
+      bg-[rgba(0,0,0,0.5)] text-white border border-white rounded-md p-3 my-2 overflow-x-auto 
       font-mono text-[0.9em]
       [white-space:pre-wrap] [word-wrap:break-word]
     `}
@@ -36,11 +39,15 @@ const CustomRenderers = {
 function ChatMessage({ content }: ChatMessageProps) {
   return (
     <div className="bubble-text">
-      <ReactMarkdown components={CustomRenderers}>
+      <ReactMarkdown
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={CustomRenderers}
+      >
         {content}
       </ReactMarkdown>
     </div>
   );
 }
 
-export { ChatMessage }
+export { ChatMessage };

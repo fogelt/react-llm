@@ -1,8 +1,8 @@
-com/example/backend/ChatController.class
-com/example/backend/ModelDownloader.class
-com/example/backend/BackendApplication.class
-com/example/backend/ToolRegistry.class
-com/example/backend/ToolExecutor.class
-com/example/backend/ChatExternalService.class
-com/example/backend/LlamaRunner.class
-com/example/backend/ConfigController.class
+com\example\backend\LlamaRunner.class
+com\example\backend\ModelDownloader.class
+com\example\backend\ToolRegistry.class
+com\example\backend\ConfigController.class
+com\example\backend\BackendApplication.class
+com\example\backend\ChatController.class
+com\example\backend\ToolExecutor.class
+com\example\backend\ChatExternalService.class

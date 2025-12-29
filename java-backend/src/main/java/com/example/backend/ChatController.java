@@ -2,14 +2,14 @@ package com.example.backend;
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.subscription.MultiEmitter;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.jboss.resteasy.reactive.RestStreamElementType;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Path("/api")
@@ -31,99 +31,114 @@ public class ChatController {
   @Produces(MediaType.SERVER_SENT_EVENTS)
   @RestStreamElementType(MediaType.APPLICATION_JSON)
   public Multi<String> proxyChat(Map<String, Object> payload) {
-    // Vi börjar med stream: false för att kunna hantera verktyg i loop
-    payload.put("stream", false);
-    boolean hasUsedTool = false;
+    return Multi.createFrom().emitter(emitter -> {
+      // CRITICAL FIX: Explicitly move the execution to a worker thread
+      Infrastructure.getDefaultWorkerPool().execute(() -> {
+        try {
+          // 1. Initial status update
+          sendEvent(emitter, "thinking", "Analyzing request...");
 
-    System.out.println("--- Analyserar anrop ---");
+          // 2. Ensure messages list exists
+          List<Map<String, Object>> messages = (List<Map<String, Object>>) payload.get("messages");
+          if (messages == null) {
+            messages = new ArrayList<>();
+            payload.put("messages", messages);
+          }
 
-    while (true) {
-      Map<String, Object> responseMap = externalService.getChatCompletion(payload);
-      List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
+          payload.put("stream", false);
+          List<String> usedTools = new ArrayList<>();
 
-      if (choices == null || choices.isEmpty()) {
-        return Multi.createFrom().item("data: [DONE]\n\n");
-      }
+          // --- TOOL LOOP (Safe to block here) ---
+          while (true) {
+            Map<String, Object> responseMap = externalService.getChatCompletion(payload);
+            if (responseMap == null || !responseMap.containsKey("choices"))
+              break;
 
-      Map<String, Object> aiMessage = (Map<String, Object>) choices.get(0).get("message");
-      List<Map<String, Object>> toolCalls = (List<Map<String, Object>>) aiMessage.get("tool_calls");
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
+            if (choices == null || choices.isEmpty())
+              break;
 
-      // Om AI:n inte vill köra fler verktyg, bryt loopen och streama svaret
-      if (toolCalls == null || toolCalls.isEmpty()) {
-        break;
-      }
+            Map<String, Object> aiMessage = (Map<String, Object>) choices.get(0).get("message");
+            List<Map<String, Object>> toolCalls = (List<Map<String, Object>>) aiMessage.get("tool_calls");
 
-      // Om vi är här betyder det att verktyg ska köras
-      hasUsedTool = true;
-      List<Map<String, Object>> messages = (List<Map<String, Object>>) payload.get("messages");
+            if (toolCalls == null || toolCalls.isEmpty())
+              break;
 
-      // 1. Lägg till AI:ns tool_calls i historiken (viktigt för kontexten)
-      messages.add(aiMessage);
+            // Add assistant's call to history
+            messages.add(aiMessage);
 
-      // 2. Exekvera alla efterfrågade verktyg
-      for (Map<String, Object> toolCall : toolCalls) {
-        String toolResult = executeTool((Map<String, Object>) toolCall.get("function"));
+            for (Map<String, Object> toolCall : toolCalls) {
+              Map<String, Object> function = (Map<String, Object>) toolCall.get("function");
+              String toolName = (String) function.get("name");
+              usedTools.add(toolName);
 
-        Map<String, Object> toolResponse = new HashMap<>();
-        toolResponse.put("role", "tool");
-        toolResponse.put("tool_call_id", toolCall.get("id"));
-        toolResponse.put("content", toolResult);
+              // Notify frontend a tool started
+              sendEvent(emitter, "tool_start", toolName);
 
-        messages.add(toolResponse);
-      }
+              String result = executeTool(function);
 
-      // Loopen fortsätter nu och skickar tillbaka resultaten till AI:n
-      System.out.println("Verktyg exekverade, skickar tillbaka resultat till AI för nästa steg...");
-    }
+              Map<String, Object> toolResponse = new HashMap<>();
+              toolResponse.put("role", "tool");
+              toolResponse.put("tool_call_id", toolCall.get("id"));
+              toolResponse.put("content", result != null ? result : "No result");
+              messages.add(toolResponse);
+            }
+            // Feedback between multi-step tool calls
+            sendEvent(emitter, "thinking", "Processing tool results...");
+          }
 
-    // NU är vi klara med alla verktyg - starta streamingen av det slutgiltiga
-    // svaret
-    payload.put("stream", true);
-    Multi<String> aiStream = formatStream(externalService.streamChatCompletion(payload));
+          // 3. Update with summary if tools were used
+          if (!usedTools.isEmpty()) {
+            sendEvent(emitter, "completed", String.join(", ", usedTools));
+          }
 
-    if (hasUsedTool) {
-      // Skicka med tool-markören först så frontenden visar den blåa ikonen
-      String toolMarker = "data: {\"choices\":[{\"delta\":{\"used_tool\":true}}]}\n\n";
-      return Multi.createBy().concatenating().streams(
-          Multi.createFrom().item(toolMarker),
-          aiStream);
-    }
+          // 4. Final Stream
+          payload.put("stream", true);
+          externalService.streamChatCompletion(payload).subscribe().with(
+              item -> emitter.emit(formatChunk(item)),
+              err -> {
+                sendEvent(emitter, "error", "Stream Failure: " + err.getMessage());
+                emitter.complete();
+              },
+              emitter::complete);
 
-    return aiStream;
+        } catch (Exception e) {
+          e.printStackTrace();
+          sendEvent(emitter, "error", "System Error: " + e.getClass().getSimpleName());
+          emitter.complete();
+        }
+      });
+    });
+  }
+
+  private void sendEvent(MultiEmitter<? super String> emitter, String status, String name) {
+    String json = String.format(
+        "data: {\"choices\":[{\"delta\":{\"used_tool\":true, \"status\":\"%s\", \"tool_name\":\"%s\"}}]}\n\n",
+        status, name);
+    emitter.emit(json);
+  }
+
+  private String formatChunk(String chunk) {
+    if (chunk == null)
+      return "";
+    String c = chunk.trim();
+    if (c.isEmpty())
+      return "";
+    return c.startsWith("data:") ? chunk + "\n\n" : "data: " + chunk + "\n\n";
   }
 
   private String executeTool(Map<String, Object> function) {
-    String name = (String) function.get("name");
-    Object rawArgs = function.get("arguments");
-    Map<String, Object> arguments = new HashMap<>();
-
     try {
-      if (rawArgs instanceof String) {
-        arguments = objectMapper.readValue((String) rawArgs, Map.class);
-      } else if (rawArgs instanceof Map) {
-        arguments = (Map<String, Object>) rawArgs;
-      }
-
-      System.out.println("Exekverar verktyg: " + name + " med args: " + arguments);
+      String name = (String) function.get("name");
+      Object rawArgs = function.get("arguments");
+      Map<String, Object> arguments = (rawArgs instanceof String)
+          ? objectMapper.readValue((String) rawArgs, Map.class)
+          : (Map<String, Object>) rawArgs;
 
       java.lang.reflect.Method method = registry.getClass().getMethod(name, Map.class);
       return (String) method.invoke(registry, arguments);
-
-    } catch (NoSuchMethodException e) {
-      return "Verktyget " + name + " saknas i ToolRegistry.";
     } catch (Exception e) {
-      return "Fel vid körning: " + e.getMessage();
+      return "Error: " + e.getMessage();
     }
-  }
-
-  private Multi<String> formatStream(Multi<String> stream) {
-    return stream.map(chunk -> {
-      String c = chunk.trim();
-      if (c.isEmpty())
-        return "";
-      if (c.startsWith("data:"))
-        return chunk + "\n\n";
-      return "data: " + chunk + "\n\n";
-    });
   }
 }

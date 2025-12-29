@@ -53,7 +53,7 @@ export const streamChatMessage = async (
   onChunk: (chunk: string) => void,
   onMetrics?: (metrics: ChatMetrics) => void,
   signal?: AbortSignal,
-  onToolUsed?: () => void,
+  onToolUsed?: (toolName: string, toolStatus: string) => void
 ): Promise<void> => {
   try {
     let tokenCount = 0;
@@ -116,7 +116,9 @@ export const streamChatMessage = async (
           const delta = json.choices?.[0]?.delta;
 
           if (delta?.used_tool) {
-            if (onToolUsed) onToolUsed();
+            const status = delta.status; // "thinking", "tool_start", "error", etc.
+            const displayName = status === "error" ? `Error: ${delta.tool_name}` : delta.tool_name;
+            onToolUsed?.(displayName || "Thinking...", status);
             continue;
           }
 

@@ -1,5 +1,5 @@
 com.aayushatharva.brotli4j:brotli4j::jar:1.16.0
-com.aayushatharva.brotli4j:native-linux-x86_64::jar:1.16.0
+com.aayushatharva.brotli4j:native-windows-x86_64::jar:1.16.0
 com.aayushatharva.brotli4j:service::jar:1.16.0
 com.cronutils:cron-utils::jar:9.2.1
 com.fasterxml.jackson.core:jackson-annotations::jar:2.17.2

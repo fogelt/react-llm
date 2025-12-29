@@ -98,10 +98,19 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
           }
         },
         controller.signal,
-        () => {
+        (name: string, status?: string) => {
           setMessages((prev) => {
             const updated = [...prev];
-            updated[updated.length - 1] = { ...updated[updated.length - 1], usedTool: true };
+            if (updated.length > 0) {
+              const lastIndex = updated.length - 1;
+              updated[lastIndex] = {
+                ...updated[lastIndex],
+                usedTool: true,
+                toolName: name,
+                toolStatus: status,
+                isError: name.toLowerCase().includes("error") || status === 'error'
+              };
+            }
             return updated;
           });
         }

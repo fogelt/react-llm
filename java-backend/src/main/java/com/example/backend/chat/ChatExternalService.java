@@ -1,4 +1,4 @@
-package com.example.backend;
+package com.example.backend.chat;
 
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 import jakarta.ws.rs.POST;
@@ -17,7 +17,7 @@ public interface ChatExternalService {
   @Path("/chat/completions")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  Map<String, Object> getChatCompletion(Map<String, Object> payload);
+  ChatResponse getChatCompletion(Map<String, Object> payload);
 
   @POST
   @Path("/chat/completions")

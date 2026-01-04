@@ -1,4 +1,4 @@
-package com.example.backend;
+package com.example.backend.llama;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import jakarta.ws.rs.Path;
 
 @Path("/api/config")
 public class ConfigController {
@@ -91,7 +90,7 @@ public class ConfigController {
 
       return Response.ok(Map.of(
           "message", "Server started successfully",
-          "port", llamaRunner.SERVER_PORT)).build();
+          "port", llamaRunner.SERVER_PORT != null ? llamaRunner.SERVER_PORT : "unknown")).build();
 
     } catch (IllegalStateException e) {
       return Response.status(Response.Status.CONFLICT)

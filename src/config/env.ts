@@ -3,6 +3,7 @@ import * as z from 'zod';
 const EnvSchema = z.object({
   JAVA_API_PORT: z.string().default('8080'),
   UPLOAD_SERVER_PORT: z.string().default('8081'),
+  LLAMA_SERVER_PORT: z.string().default('8082'),
 
   ENABLE_API_MOCKING: z
     .string()
@@ -16,6 +17,7 @@ const EnvSchema = z.object({
 type EnvType = z.infer<typeof EnvSchema> & {
   PRIMARY_BACKEND_URL: string;
   UPLOAD_SERVER_URL: string;
+  LLAMA_SERVER_URL: string;
 };
 
 const createEnv = (): EnvType => {
@@ -42,6 +44,7 @@ const createEnv = (): EnvType => {
     ...parsed.data,
     PRIMARY_BACKEND_URL: `http://${currentHost}:${parsed.data.JAVA_API_PORT}`,
     UPLOAD_SERVER_URL: `http://${currentHost}:${parsed.data.UPLOAD_SERVER_PORT}`,
+    LLAMA_SERVER_URL: `http://${currentHost}:${parsed.data.LLAMA_SERVER_PORT}`,
   };
 };
 

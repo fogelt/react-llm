@@ -1,7 +1,8 @@
-package com.example.backend;
+package com.example.backend.llama;
 
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.scheduler.Scheduled;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import java.io.BufferedReader;
@@ -18,20 +19,14 @@ public class LlamaRunner {
 
   private Process llamaProcess;
   private String currentModelPath = "";
-  public final String SERVER_PORT = "8082";
+  @ConfigProperty(name = "vite.app.llama.server.port", defaultValue = "8082")
+  String SERVER_PORT;
+
   private final AtomicLong lastHeartbeat = new AtomicLong(System.currentTimeMillis());
   private final long TIMEOUT_MS = 15000;
 
   public void resetHeartbeat() {
     lastHeartbeat.set(System.currentTimeMillis());
-  }
-
-  private String getBinaryName() {
-    String os = System.getProperty("os.name").toLowerCase();
-    if (os.contains("win")) {
-      return "llama-server.exe";
-    }
-    return "llama-server";
   }
 
   public String getCurrentModelPath() {
@@ -44,7 +39,7 @@ public class LlamaRunner {
 
   public void stopLlama(@Observes ShutdownEvent ev) {
     if (isRunning()) {
-      System.out.println("🛑 Stopping Llama Server...");
+      System.out.println("Stopping Llama Server...");
       llamaProcess.destroyForcibly();
       this.llamaProcess = null;
     }
@@ -55,7 +50,7 @@ public class LlamaRunner {
     if (isRunning()) {
       long elapsed = System.currentTimeMillis() - lastHeartbeat.get();
       if (elapsed > TIMEOUT_MS) {
-        System.out.println("🚨 WATCHDOG TRIGGERED: No heartbeat detected for " + (elapsed / 1000) + "s.");
+        System.out.println("WATCHDOG TRIGGERED: No heartbeat detected for " + (elapsed / 1000) + "s.");
         stopLlama(null);
       }
     }
@@ -70,10 +65,9 @@ public class LlamaRunner {
 
     Path normalizedModel = Paths.get(modelPath).toAbsolutePath();
     this.currentModelPath = normalizedModel.toString();
-    String binary = getBinaryName();
 
     List<String> command = new ArrayList<>();
-    command.add(binary);
+    command.add("llama-server");
     command.add("-m");
     command.add(currentModelPath);
     command.add("--ctx-size");
@@ -97,7 +91,7 @@ public class LlamaRunner {
       resetHeartbeat();
       waitForLlamaReadiness(this.llamaProcess);
     } catch (IOException e) {
-      throw new IOException("Failed to launch " + binary + ": " + e.getMessage());
+      throw new IOException("Failed to launch Llama server: " + e.getMessage());
     }
   }
 
@@ -107,7 +101,7 @@ public class LlamaRunner {
       while ((line = reader.readLine()) != null) {
         System.out.println("[Llama]: " + line);
         if (line.contains("server is listening on")) {
-          System.out.println("✅ Llama Server ready on port " + SERVER_PORT);
+          System.out.println("Llama Server ready on port " + SERVER_PORT);
           return;
         }
         if (line.contains("error: failed to load model")) {

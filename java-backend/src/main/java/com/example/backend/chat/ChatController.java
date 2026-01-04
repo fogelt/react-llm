@@ -1,4 +1,4 @@
-package com.example.backend;
+package com.example.backend.chat;
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Multi;
@@ -10,7 +10,8 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.jboss.resteasy.reactive.RestStreamElementType;
 import java.util.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
+import com.example.backend.chat.tools.ToolExecutor;
 
 @Path("/api")
 public class ChatController {
@@ -20,10 +21,7 @@ public class ChatController {
   ChatExternalService externalService;
 
   @Inject
-  ToolRegistry registry;
-
-  @Inject
-  ObjectMapper objectMapper;
+  ToolExecutor toolExecutor;
 
   @POST
   @Path("/chat")
@@ -32,71 +30,86 @@ public class ChatController {
   @RestStreamElementType(MediaType.APPLICATION_JSON)
   public Multi<String> proxyChat(Map<String, Object> payload) {
     return Multi.createFrom().emitter(emitter -> {
-      // CRITICAL FIX: Explicitly move the execution to a worker thread
       Infrastructure.getDefaultWorkerPool().execute(() -> {
         try {
-          // 1. Initial status update
+          // Initial status for the UI
           sendEvent(emitter, "thinking", "Analyzing request...");
 
-          // 2. Ensure messages list exists
+          @SuppressWarnings("unchecked")
           List<Map<String, Object>> messages = (List<Map<String, Object>>) payload.get("messages");
           if (messages == null) {
             messages = new ArrayList<>();
             payload.put("messages", messages);
           }
 
+          // Force non-streaming for the tool-calling loop
           payload.put("stream", false);
+
           List<String> usedTools = new ArrayList<>();
+          int loopCount = 0;
+          final int MAX_ITERATIONS = 5;
 
-          // --- TOOL LOOP (Safe to block here) ---
-          while (true) {
-            Map<String, Object> responseMap = externalService.getChatCompletion(payload);
-            if (responseMap == null || !responseMap.containsKey("choices"))
+          while (loopCount < MAX_ITERATIONS) {
+            ChatResponse response = externalService.getChatCompletion(payload);
+
+            if (response == null || response.choices == null || response.choices.isEmpty()) {
               break;
+            }
 
-            List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
-            if (choices == null || choices.isEmpty())
+            ChatResponse.Message aiMessage = response.choices.get(0).message;
+
+            if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty()) {
               break;
+            }
 
-            Map<String, Object> aiMessage = (Map<String, Object>) choices.get(0).get("message");
-            List<Map<String, Object>> toolCalls = (List<Map<String, Object>>) aiMessage.get("tool_calls");
+            Map<String, Object> assistantHistoryEntry = new HashMap<>();
+            assistantHistoryEntry.put("role", "assistant");
+            assistantHistoryEntry.put("tool_calls", aiMessage.tool_calls);
+            messages.add(assistantHistoryEntry);
 
-            if (toolCalls == null || toolCalls.isEmpty())
-              break;
-
-            // Add assistant's call to history
-            messages.add(aiMessage);
-
-            for (Map<String, Object> toolCall : toolCalls) {
-              Map<String, Object> function = (Map<String, Object>) toolCall.get("function");
-              String toolName = (String) function.get("name");
+            // Execute each tool call
+            for (ChatResponse.ToolCall toolCall : aiMessage.tool_calls) {
+              String toolName = toolCall.function.name;
               usedTools.add(toolName);
 
-              // Notify frontend a tool started
+              // Update UI: Tool is starting
               sendEvent(emitter, "tool_start", toolName);
 
-              String result = executeTool(function);
+              String result = toolExecutor.execute(toolCall.function);
 
+              // Clean the result to ensure it's a valid string for the LLM
+              String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
+
+              // Add the tool result back to history
               Map<String, Object> toolResponse = new HashMap<>();
               toolResponse.put("role", "tool");
-              toolResponse.put("tool_call_id", toolCall.get("id"));
-              toolResponse.put("content", result != null ? result : "No result");
+              toolResponse.put("tool_call_id", toolCall.id);
+              toolResponse.put("content", safeResult);
+
+              System.out.println("[Tool Output]: " + toolName + " returned " + safeResult.length() + " chars.");
               messages.add(toolResponse);
             }
-            // Feedback between multi-step tool calls
-            sendEvent(emitter, "thinking", "Processing tool results...");
+
+            // Update UI: AI is now looking at what the tools found
+            sendEvent(emitter, "thinking", "Analyzing results...");
+            loopCount++;
           }
 
-          // 3. Update with summary if tools were used
+          if (loopCount >= MAX_ITERATIONS) {
+            sendEvent(emitter, "error", "Iteration limit reached.");
+          }
+
+          // Send summary to UI
           if (!usedTools.isEmpty()) {
             sendEvent(emitter, "completed", String.join(", ", usedTools));
           }
 
-          // 4. Final Stream
+          // Switch to streaming for the natural language answer
           payload.put("stream", true);
           externalService.streamChatCompletion(payload).subscribe().with(
               item -> emitter.emit(formatChunk(item)),
               err -> {
+                System.err.println("Streaming error: " + err.getMessage());
                 sendEvent(emitter, "error", "Stream Failure: " + err.getMessage());
                 emitter.complete();
               },
@@ -111,10 +124,12 @@ public class ChatController {
     });
   }
 
+  // Sends a specialized JSON chunk to the frontend to update the status badges.
   private void sendEvent(MultiEmitter<? super String> emitter, String status, String name) {
+    String safeName = (name != null) ? name.replace("\"", "\\\"") : "";
     String json = String.format(
         "data: {\"choices\":[{\"delta\":{\"used_tool\":true, \"status\":\"%s\", \"tool_name\":\"%s\"}}]}\n\n",
-        status, name);
+        status, safeName);
     emitter.emit(json);
   }
 
@@ -124,21 +139,15 @@ public class ChatController {
     String c = chunk.trim();
     if (c.isEmpty())
       return "";
-    return c.startsWith("data:") ? chunk + "\n\n" : "data: " + chunk + "\n\n";
-  }
 
-  private String executeTool(Map<String, Object> function) {
-    try {
-      String name = (String) function.get("name");
-      Object rawArgs = function.get("arguments");
-      Map<String, Object> arguments = (rawArgs instanceof String)
-          ? objectMapper.readValue((String) rawArgs, Map.class)
-          : (Map<String, Object>) rawArgs;
-
-      java.lang.reflect.Method method = registry.getClass().getMethod(name, Map.class);
-      return (String) method.invoke(registry, arguments);
-    } catch (Exception e) {
-      return "Error: " + e.getMessage();
+    if (c.startsWith("data:")) {
+      return c + "\n\n";
     }
+
+    if (c.equals("[DONE]")) {
+      return "data: [DONE]\n\n";
+    }
+
+    return "data: " + chunk + "\n\n";
   }
 }

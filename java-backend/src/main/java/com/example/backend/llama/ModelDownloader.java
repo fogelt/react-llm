@@ -1,4 +1,4 @@
-package com.example.backend;
+package com.example.backend.llama;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;

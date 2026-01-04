@@ -8,6 +8,20 @@ type MessageListProps = {
 };
 
 export function MessageList({ messages, bottomRef }: MessageListProps) {
+
+  // Helper to turn "tool_name" into "Tool name"
+  const formatToolName = (name?: string) => {
+    if (!name) return "";
+    const formatted = name.replace(/_/g, ' ');
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  };
+
+  // Helper for dynamic thinking status
+  const getThinkingText = (name?: string) => {
+    if (name && name !== "Thinking...") return name;
+    return "Thinking...";
+  };
+
   return (
     <div className="glass mb-4 overflow-y-auto p-4 rounded-lg w-[75vw] h-[80vh]">
       {messages.length === 0 ? (
@@ -19,13 +33,10 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
           const isUser = m.role === 'user';
           const isAssistant = m.role === 'assistant';
 
-          // Logic: Hide the badge if the AI started typing, UNLESS there is an error
           const hasContent = m.content && m.content.trim().length > 0;
           const showToolBadge = isAssistant && m.usedTool && (!hasContent || m.isError);
-
           const hasAttachment = isUser && ((m.images && m.images.length > 0) || m.extraContext);
 
-          // Common badge style
           const badgeBaseClass = "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tighter mb-2 w-fit px-2 py-0.5 rounded shadow-sm opacity-90 transition-all duration-300 animate-in zoom-in fade-in";
 
           return (
@@ -34,15 +45,7 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                 className={`
                   glass inline-block max-w-[65%] py-[0.6rem] px-[0.9rem] leading-[1.3] break-words whitespace-pre-wrap overflow-x-auto transition-all duration-500
                   ${isUser ? 'self-end rounded-br rounded-tl-lg' : 'self-start rounded-bl rounded-tr-lg'}
-                  
-                  /* Dynamic Border Logic */
-                  ${m.isError
-                    ? 'border border-red-500/50 bg-red-500/5 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
-                    : showToolBadge
-                      ? 'border-l-2 border-emerald-400/50 opacity-75 scale-[0.98]'
-                      : 'border-none'
-                  }
-                  
+                  ${m.isError ? 'border border-red-500/50 bg-red-500/5 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'border-none'}
                   ${hasAttachment ? 'border-r-2 border-emerald-400/50 text-right' : ''}
                 `}
               >
@@ -56,15 +59,20 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                     }
                   `}>
                     <span className="material-icons !text-[12px] animate-pulse">
-                      {m.isError ? 'error_outline' : (m.toolStatus === 'thinking' ? 'hourglass_empty' : 'build')}
+                      {m.isError ? 'error_outline' : (m.toolStatus === 'thinking' ? 'psychology' : 'build')}
                     </span>
                     <span className="capitalize">
-                      {m.isError ? (m.toolName || 'System Error') : (m.toolStatus === 'thinking' ? 'Thinking...' : m.toolName)}
+                      {m.isError
+                        ? (m.toolName || 'System Error')
+                        : (m.toolStatus === 'thinking'
+                          ? getThinkingText(m.toolName)
+                          : formatToolName(m.toolName))
+                      }
                     </span>
                   </div>
                 )}
 
-                {/* ATTACHMENT BADGE (User) */}
+                {/* ATTACHMENT BADGE */}
                 {hasAttachment && (
                   <div className={`${badgeBaseClass} bg-emerald-500/10 text-emerald-300 ml-auto`}>
                     <span className="material-icons !text-[12px] animate-pulse">attach_file</span>

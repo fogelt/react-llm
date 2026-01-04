@@ -29,6 +29,6 @@ public class ChatResponse {
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Function {
     public String name;
-    public Object arguments;
+    public String arguments;
   }
 }

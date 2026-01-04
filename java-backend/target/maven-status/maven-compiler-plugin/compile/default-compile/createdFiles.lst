@@ -1,5 +1,6 @@
 com\example\backend\chat\ChatResponse$ToolCall.class
 com\example\backend\chat\tools\ToolRegistry.class
+com\example\backend\chat\ChatController$1.class
 com\example\backend\chat\tools\ToolExecutor$1.class
 com\example\backend\BackendApplication.class
 com\example\backend\chat\ChatResponse$Function.class

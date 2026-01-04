@@ -12,6 +12,8 @@ import org.jboss.resteasy.reactive.RestStreamElementType;
 import java.util.*;
 
 import com.example.backend.chat.tools.ToolExecutor;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Path("/api")
 public class ChatController {
@@ -23,6 +25,9 @@ public class ChatController {
   @Inject
   ToolExecutor toolExecutor;
 
+  @Inject
+  ObjectMapper objectMapper;
+
   @POST
   @Path("/chat")
   @Blocking
@@ -32,7 +37,6 @@ public class ChatController {
     return Multi.createFrom().emitter(emitter -> {
       Infrastructure.getDefaultWorkerPool().execute(() -> {
         try {
-          // Initial status for the UI
           sendEvent(emitter, "thinking", "Analyzing request...");
 
           @SuppressWarnings("unchecked")
@@ -42,7 +46,6 @@ public class ChatController {
             payload.put("messages", messages);
           }
 
-          // Force non-streaming for the tool-calling loop
           payload.put("stream", false);
 
           List<String> usedTools = new ArrayList<>();
@@ -70,27 +73,30 @@ public class ChatController {
             // Execute each tool call
             for (ChatResponse.ToolCall toolCall : aiMessage.tool_calls) {
               String toolName = toolCall.function.name;
-              usedTools.add(toolName);
+              String uiTarget = "web"; // Default label
 
-              // Update UI: Tool is starting
-              sendEvent(emitter, "tool_start", toolName);
+              try {
+                Map<String, Object> argsMap = objectMapper.readValue(
+                    toolCall.function.arguments,
+                    new TypeReference<Map<String, Object>>() {
+                    });
+                uiTarget = (String) argsMap.getOrDefault("target", "web");
+              } catch (Exception e) {
+                uiTarget = toolName;
+              }
+
+              sendEvent(emitter, "tool_start", uiTarget);
 
               String result = toolExecutor.execute(toolCall.function);
-
-              // Clean the result to ensure it's a valid string for the LLM
               String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
 
-              // Add the tool result back to history
               Map<String, Object> toolResponse = new HashMap<>();
               toolResponse.put("role", "tool");
               toolResponse.put("tool_call_id", toolCall.id);
               toolResponse.put("content", safeResult);
-
-              System.out.println("[Tool Output]: " + toolName + " returned " + safeResult.length() + " chars.");
               messages.add(toolResponse);
             }
 
-            // Update UI: AI is now looking at what the tools found
             sendEvent(emitter, "thinking", "Analyzing results...");
             loopCount++;
           }
@@ -99,12 +105,10 @@ public class ChatController {
             sendEvent(emitter, "error", "Iteration limit reached.");
           }
 
-          // Send summary to UI
           if (!usedTools.isEmpty()) {
             sendEvent(emitter, "completed", String.join(", ", usedTools));
           }
 
-          // Switch to streaming for the natural language answer
           payload.put("stream", true);
           externalService.streamChatCompletion(payload).subscribe().with(
               item -> emitter.emit(formatChunk(item)),
@@ -124,7 +128,6 @@ public class ChatController {
     });
   }
 
-  // Sends a specialized JSON chunk to the frontend to update the status badges.
   private void sendEvent(MultiEmitter<? super String> emitter, String status, String name) {
     String safeName = (name != null) ? name.replace("\"", "\\\"") : "";
     String json = String.format(
@@ -139,15 +142,10 @@ public class ChatController {
     String c = chunk.trim();
     if (c.isEmpty())
       return "";
-
-    if (c.startsWith("data:")) {
+    if (c.startsWith("data:"))
       return c + "\n\n";
-    }
-
-    if (c.equals("[DONE]")) {
+    if (c.equals("[DONE]"))
       return "data: [DONE]\n\n";
-    }
-
     return "data: " + chunk + "\n\n";
   }
 }

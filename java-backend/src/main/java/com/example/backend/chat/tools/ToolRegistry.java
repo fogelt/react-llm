@@ -12,36 +12,47 @@ public class ToolRegistry {
 
   public String web_search(Map<String, Object> args) {
     String query = (String) args.get("query");
+    String target = (String) args.getOrDefault("target", "web"); // "web", "reddit", or "wikipedia"
+
     if (query == null || query.isEmpty())
       return "No query provided.";
 
-    System.out.println("Searching DuckDuckGo for: " + query);
-
     try {
-      String url = "https://html.duckduckgo.com/html/?q=" + java.net.URLEncoder.encode(query, "UTF-8");
+      String finalQuery = query;
+      if ("reddit".equalsIgnoreCase(target)) {
+        finalQuery = "site:reddit.com " + query;
+      } else if ("wikipedia".equalsIgnoreCase(target)) {
+        finalQuery = "site:wikipedia.org " + query;
+      }
 
+      String url = "https://html.duckduckgo.com/html/?q=" + java.net.URLEncoder.encode(finalQuery, "UTF-8");
       Document doc = Jsoup.connect(url)
           .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+          .timeout(10000)
           .get();
 
       Elements results = doc.select(".result__body");
-
       if (results.isEmpty())
-        return "Inga resultat hittades för: " + query;
+        return "No results found for: " + query + " on " + target;
 
-      // Format first 5 results
+      // Format and label the output
       return results.stream()
           .limit(5)
           .map(element -> {
             String title = element.select(".result__title").text();
             String snippet = element.select(".result__snippet").text();
-            return "Titel: " + title + "\nInfo: " + snippet + "\n";
+            String source = "General Web";
+            if (title.toLowerCase().contains("reddit"))
+              source = "Reddit";
+            if (title.toLowerCase().contains("wikipedia"))
+              source = "Wikipedia";
+
+            return String.format("[%s] %s\nInfo: %s\n", source, title, snippet);
           })
           .collect(Collectors.joining("\n---\n"));
 
     } catch (Exception e) {
-      e.printStackTrace();
-      return "Fel vid sökning: " + e.getMessage();
+      return "Search failed: " + e.getMessage();
     }
   }
 }

@@ -47,7 +47,6 @@ public class ChatController {
             payload.put("messages", messages);
           }
 
-          // RESEARCH PHASE (Synchronous)
           payload.put("stream", false);
           int loopCount = 0;
           final int MAX_ITERATIONS = 5;
@@ -61,20 +60,17 @@ public class ChatController {
             if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty())
               break;
 
-            // Add assistant intent
             Map<String, Object> assistantHistoryEntry = new HashMap<>();
             assistantHistoryEntry.put("role", "assistant");
             assistantHistoryEntry.put("tool_calls", aiMessage.tool_calls);
             messages.add(assistantHistoryEntry);
 
-            // Execute ONLY the first tool call
             ChatResponse.ToolCall toolCall = aiMessage.tool_calls.get(0);
             sendEvent(emitter, "tool_start", "web");
 
             String result = toolExecutor.execute(toolCall.function, seenUrls);
             String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
 
-            // Track URLs for deduplication
             try {
               List<Map<String, Object>> resultData = objectMapper.readValue(safeResult, new TypeReference<>() {
               });
@@ -88,7 +84,6 @@ public class ChatController {
 
             sendEvent(emitter, "tool_output", safeResult);
 
-            // Add tool result to history
             Map<String, Object> toolResponse = new HashMap<>();
             toolResponse.put("role", "tool");
             toolResponse.put("tool_call_id", toolCall.id);
@@ -99,30 +94,24 @@ public class ChatController {
             sendEvent(emitter, "thinking", "Analyzing results...");
           }
 
-          // FINAL RESPONSE PHASE (Streaming)
+          // FINAL RESPONSE PHASE
           sendEvent(emitter, "thinking", "Formulating final answer...");
-
-          // tell the model to finish the conversation
           payload.put("stream", true);
 
           externalService.streamChatCompletion(payload)
-              .onItem().transform(item -> {
+              .onItem().invoke(item -> {
                 if (!emitter.isCancelled()) {
                   emitter.emit(formatChunk(item));
                 }
-                return item;
               })
               .onFailure().invoke(err -> {
                 System.err.println("Final stream error: " + err.getMessage());
-                sendEvent(emitter, "error", "Connection lost during final answer.");
+                sendEvent(emitter, "error", "Stream interrupted.");
               })
-              .onTermination().invoke(() -> {
-                if (!emitter.isCancelled()) {
-                  emitter.complete();
-                }
-              })
-              .subscribe().with(item -> {
-              });
+              .collect().asList() // This forces the thread to wait for all chunks
+              .await().indefinitely();
+
+          emitter.complete();
 
         } catch (Exception e) {
           e.printStackTrace();

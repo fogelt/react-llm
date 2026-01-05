@@ -53,7 +53,8 @@ export const streamChatMessage = async (
   onChunk: (chunk: string) => void,
   onMetrics?: (metrics: ChatMetrics) => void,
   signal?: AbortSignal,
-  onToolUsed?: (toolName: string, toolStatus: string) => void
+  onToolUsed?: (toolName: string, toolStatus: string) => void,
+  onSourcesFound?: (sources: any[]) => void
 ): Promise<void> => {
   try {
     let tokenCount = 0;
@@ -116,7 +117,18 @@ export const streamChatMessage = async (
           const delta = json.choices?.[0]?.delta;
 
           if (delta?.used_tool) {
-            const status = delta.status; // "thinking", "tool_start", "error", etc.
+            const status = delta.status;
+
+            if (status === "tool_output" && delta.content) {
+              try {
+                const sources = JSON.parse(delta.content); // Parse the source list
+                onSourcesFound?.(sources);
+              } catch (e) {
+                console.error("Failed to parse sources JSON", e);
+              }
+              continue;
+            }
+
             const displayName = status === "error" ? `Error: ${delta.tool_name}` : delta.tool_name;
             onToolUsed?.(displayName || "Thinking...", status);
             continue;

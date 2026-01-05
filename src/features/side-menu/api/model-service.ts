@@ -3,7 +3,7 @@ import { API_ROUTES } from '@/lib/api-routes';
 import { env } from '@/config/env';
 
 // Legacy fallback for navigator.sendBeacon
-export const API_STOP_URL = env.API_URL + API_ROUTES.CONFIG_STOP;
+export const API_STOP_URL = env.PRIMARY_BACKEND_URL + API_ROUTES.CONFIG_STOP;
 
 export const modelService = {
   // Fetch list of available GGUF and projector files

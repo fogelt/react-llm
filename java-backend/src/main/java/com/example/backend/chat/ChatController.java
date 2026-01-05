@@ -90,6 +90,10 @@ public class ChatController {
               String result = toolExecutor.execute(toolCall.function);
               String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
 
+              if ("web_search".equals(toolName)) {
+                sendEvent(emitter, "tool_output", safeResult);
+              }
+
               Map<String, Object> toolResponse = new HashMap<>();
               toolResponse.put("role", "tool");
               toolResponse.put("tool_call_id", toolCall.id);
@@ -128,12 +132,30 @@ public class ChatController {
     });
   }
 
-  private void sendEvent(MultiEmitter<? super String> emitter, String status, String name) {
-    String safeName = (name != null) ? name.replace("\"", "\\\"") : "";
-    String json = String.format(
-        "data: {\"choices\":[{\"delta\":{\"used_tool\":true, \"status\":\"%s\", \"tool_name\":\"%s\"}}]}\n\n",
-        status, safeName);
-    emitter.emit(json);
+  private void sendEvent(MultiEmitter<? super String> emitter, String status, String content) {
+    try {
+      Map<String, Object> delta = new HashMap<>();
+      delta.put("used_tool", true);
+      delta.put("status", status);
+
+      // Use 'tool_name' for status updates, use 'content' for the actual search data
+      if ("tool_output".equals(status)) {
+        delta.put("content", content);
+      } else {
+        delta.put("tool_name", content);
+      }
+
+      Map<String, Object> choice = new HashMap<>();
+      choice.put("delta", delta);
+
+      Map<String, Object> envelope = new HashMap<>();
+      envelope.put("choices", Collections.singletonList(choice));
+
+      String json = objectMapper.writeValueAsString(envelope);
+      emitter.emit("data: " + json + "\n\n");
+    } catch (Exception e) {
+      emitter.emit("data: {\"error\": \"Failed to serialize event\"}\n\n");
+    }
   }
 
   private String formatChunk(String chunk) {

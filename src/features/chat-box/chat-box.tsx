@@ -113,6 +113,20 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
             }
             return updated;
           });
+        },
+        (sources: any[]) => {
+          setMessages((prev) => {
+            const updated = [...prev];
+            if (updated.length > 0) {
+              const lastIndex = updated.length - 1;
+              updated[lastIndex] = {
+                ...updated[lastIndex],
+                sources: sources
+              };
+              saveChat(updated, contextUsage, chatId);
+            }
+            return updated;
+          });
         }
       );
     } catch (error: any) {

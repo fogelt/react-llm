@@ -8,8 +8,6 @@ type MessageListProps = {
 };
 
 export function MessageList({ messages, bottomRef }: MessageListProps) {
-
-  // 1. New Helper for Favicons & Brand Colors
   const getToolTheme = (name?: string) => {
     const n = name?.toLowerCase() || "";
     if (n.includes("reddit")) return {
@@ -50,10 +48,10 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
           const isUser = m.role === 'user';
           const isAssistant = m.role === 'assistant';
           const hasContent = m.content && m.content.trim().length > 0;
-          const showToolBadge = isAssistant && m.usedTool && (!hasContent || m.isError);
-          const hasAttachment = isUser && ((m.images && m.images.length > 0) || m.extraContext);
 
-          // Get the theme for this specific tool
+          // Updated logic: Show the badge if a tool was used, even if content exists (so sources stay visible)
+          const showToolBadge = isAssistant && m.usedTool;
+          const hasAttachment = isUser && ((m.images && m.images.length > 0) || m.extraContext);
           const theme = getToolTheme(m.toolName);
 
           const badgeBaseClass = "flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight mb-2 w-fit px-2 py-1 rounded shadow-sm opacity-90 transition-all duration-300 animate-in zoom-in fade-in";
@@ -67,35 +65,51 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                   ${m.isError ? 'border border-red-500/50 bg-red-500/5 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'border-none'}
                 `}
               >
-                {/* DYNAMIC BRANDED TOOL BADGE */}
+                {/* DYNAMIC TOOL BADGE & PERSISTENT SOURCES */}
                 {showToolBadge && (
-                  <div className={`
-                      ${badgeBaseClass} 
-                      ${m.isError
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/40'
-                      : theme.color
-                    }
-                    `}>
-
-                    {/* FAVICON LOGIC */}
-                    {!m.isError && theme.icon ? (
-                      <img src={theme.icon} className="w-3 h-3 rounded-full" alt="icon" />
-                    ) : (
-                      <span className="material-icons !text-[12px] animate-pulse">
-                        {m.isError ? 'error_outline' : 'psychology'}
+                  <div className="flex items-center gap-3 mb-2">
+                    {/* The Working Indicator (Thinking Text) */}
+                    <div className={`
+                        ${badgeBaseClass} mb-0
+                        ${m.isError ? 'bg-red-500/20 text-red-400 border border-red-500/40' : theme.color}
+                      `}>
+                      {!m.isError && theme.icon ? (
+                        <img src={theme.icon} className="w-3 h-3 rounded-full" alt="icon" />
+                      ) : (
+                        <span className="material-icons !text-[12px] animate-pulse">
+                          {m.isError ? 'error_outline' : 'psychology'}
+                        </span>
+                      )}
+                      <span className="capitalize">
+                        {m.isError ? (m.toolName || 'Error') : (m.toolStatus === 'thinking' ? getThinkingText(m.toolName) : theme.label)}
                       </span>
-                    )}
+                    </div>
 
-                    <span className="capitalize">
-                      {m.isError
-                        ? (m.toolName || 'System Error')
-                        : (m.toolStatus === 'thinking' ? getThinkingText(m.toolName) : theme.label)
-                      }
-                    </span>
+                    {/* PERSISTENT SOURCE ICONS */}
+                    {m.sources && m.sources.length > 0 && (
+                      <div className="flex items-center gap-1.5 pl-2 border-l border-white/10 animate-in fade-in slide-in-from-left-2 duration-500">
+                        {m.sources.map((source, idx) => (
+                          <a
+                            key={idx}
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={source.title}
+                            className="transition-transform hover:scale-125"
+                          >
+                            <img
+                              src={`https://www.google.com/s2/favicons?domain=${new URL(source.url).hostname}&sz=32`}
+                              className="w-3.5 h-3.5 rounded-sm grayscale-[0.3] hover:grayscale-0 shadow-sm"
+                              alt="source"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* ATTACHMENT BADGE */}
+                {/* ATTACHMENT BADGE (stays the same) */}
                 {hasAttachment && (
                   <div className={`${badgeBaseClass} bg-emerald-500/10 text-emerald-300 ml-auto`}>
                     <span className="material-icons !text-[12px] animate-pulse">attach_file</span>
@@ -103,7 +117,7 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                   </div>
                 )}
 
-                {/* IMAGE PREVIEW */}
+                {/* IMAGE PREVIEW (stays the same) */}
                 {m.images && m.images.length > 0 && isUser && (
                   <div className="my-2 border border-white/10 rounded-md overflow-hidden shadow-lg">
                     <img src={m.images[0]} alt="Attached preview" className="max-w-full h-auto object-cover max-h-[180px]" />
@@ -121,8 +135,6 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                       <span className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:-0.15s]"></span>
                       <span className="w-1 h-1 bg-white rounded-full animate-bounce"></span>
                     </div>
-                  ) : m.isError && !hasContent ? (
-                    <p className="text-[11px] text-red-400 italic">The operation could not be completed.</p>
                   ) : null}
                 </div>
               </div>

@@ -96,31 +96,33 @@ public class ChatController {
             messages.add(toolResponse);
 
             loopCount++;
-            sendEvent(emitter, "thinking", "Analyzing results (Step " + loopCount + ")...");
+            sendEvent(emitter, "thinking", "Analyzing results...");
           }
 
           // FINAL RESPONSE PHASE (Streaming)
           sendEvent(emitter, "thinking", "Formulating final answer...");
 
-          // Critical: Ensure we tell the model to finish the conversation
+          // tell the model to finish the conversation
           payload.put("stream", true);
 
-          // We use await().indefinitely() logic inside the worker thread
-          // to pipe the stream to the emitter correctly.
           externalService.streamChatCompletion(payload)
-              .subscribe().with(
-                  item -> {
-                    if (!emitter.isCancelled()) {
-                      emitter.emit(formatChunk(item));
-                    }
-                  },
-                  err -> {
-                    System.err.println("Stream Error: " + err.getMessage());
-                    emitter.complete();
-                  },
-                  () -> {
-                    emitter.complete();
-                  });
+              .onItem().transform(item -> {
+                if (!emitter.isCancelled()) {
+                  emitter.emit(formatChunk(item));
+                }
+                return item;
+              })
+              .onFailure().invoke(err -> {
+                System.err.println("Final stream error: " + err.getMessage());
+                sendEvent(emitter, "error", "Connection lost during final answer.");
+              })
+              .onTermination().invoke(() -> {
+                if (!emitter.isCancelled()) {
+                  emitter.complete();
+                }
+              })
+              .subscribe().with(item -> {
+              });
 
         } catch (Exception e) {
           e.printStackTrace();
@@ -153,10 +155,17 @@ public class ChatController {
   }
 
   private String formatChunk(String chunk) {
-    if (chunk == null || chunk.trim().isEmpty())
+    if (chunk == null)
       return "";
-    if (chunk.startsWith("data:") || chunk.equals("[DONE]"))
-      return chunk + "\n\n";
-    return "data: " + chunk + "\n\n";
+    String trimmed = chunk.trim();
+    if (trimmed.isEmpty())
+      return "";
+    if (trimmed.startsWith("data:")) {
+      return trimmed.endsWith("\n\n") ? trimmed : trimmed + "\n\n";
+    }
+    if (trimmed.equals("[DONE]")) {
+      return "data: [DONE]\n\n";
+    }
+    return "data: " + trimmed + "\n\n";
   }
 }

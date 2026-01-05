@@ -12,4 +12,5 @@ com\example\backend\llama\ModelDownloader.class
 com\example\backend\chat\ChatController.class
 com\example\backend\chat\ChatResponse$Choice.class
 com\example\backend\chat\ChatResponse.class
+com\example\backend\chat\ChatController$2.class
 com\example\backend\llama\LlamaRunner.class

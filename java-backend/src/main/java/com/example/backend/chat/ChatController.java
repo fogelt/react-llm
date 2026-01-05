@@ -37,8 +37,9 @@ public class ChatController {
     return Multi.createFrom().emitter(emitter -> {
       Infrastructure.getDefaultWorkerPool().execute(() -> {
         try {
-          // 1. Initialize logic
+          // Track URLs to ensure the AI finds NEW info each loop
           Set<String> seenUrls = new HashSet<>();
+
           sendEvent(emitter, "thinking", "Analyzing request...");
 
           @SuppressWarnings("unchecked")
@@ -48,55 +49,71 @@ public class ChatController {
             payload.put("messages", messages);
           }
 
-          // Synchronous research phase
+          // Perform research steps synchronously
           payload.put("stream", false);
+
           int loopCount = 0;
           final int MAX_ITERATIONS = 5;
 
-          // 2. Reasoning Loop
           while (loopCount < MAX_ITERATIONS) {
             ChatResponse response = externalService.getChatCompletion(payload);
-            if (response == null || response.choices == null || response.choices.isEmpty())
+
+            if (response == null || response.choices == null || response.choices.isEmpty()) {
               break;
+            }
 
             ChatResponse.Message aiMessage = response.choices.get(0).message;
-            if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty())
-              break;
 
-            // Add AI's intent to message history
+            // No more tools? AI is ready to answer.
+            if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty()) {
+              break;
+            }
+
+            // Log assistant's intent
             Map<String, Object> assistantHistoryEntry = new HashMap<>();
             assistantHistoryEntry.put("role", "assistant");
             assistantHistoryEntry.put("tool_calls", aiMessage.tool_calls);
             messages.add(assistantHistoryEntry);
 
-            // Execute the FIRST tool call (Sequential reasoning)
+            // Execute ONLY the first tool call to force sequential reasoning
             ChatResponse.ToolCall toolCall = aiMessage.tool_calls.get(0);
             String toolName = toolCall.function.name;
+            String uiTarget = "web";
 
-            // Notify UI that a tool has started
-            sendEvent(emitter, "tool_start", "web");
+            try {
+              Map<String, Object> argsMap = objectMapper.readValue(
+                  toolCall.function.arguments,
+                  new TypeReference<Map<String, Object>>() {
+                  });
+              uiTarget = (String) argsMap.getOrDefault("target", "web");
+            } catch (Exception e) {
+              uiTarget = toolName;
+            }
 
+            sendEvent(emitter, "tool_start", uiTarget);
+
+            // Execute and filter results
             String result = toolExecutor.execute(toolCall.function, seenUrls);
             String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
 
-            // Update URL memory for deduplication
+            // Update seenUrls from the new search result
             try {
               List<Map<String, Object>> resultData = objectMapper.readValue(safeResult, new TypeReference<>() {
               });
               if (!resultData.isEmpty()) {
                 String url = (String) resultData.get(0).get("url");
-                if (url != null)
+                if (url != null) {
                   seenUrls.add(url);
+                }
               }
             } catch (Exception ignored) {
             }
 
-            // Send the tool results to the UI to update icons
             if ("web_search".equals(toolName)) {
               sendEvent(emitter, "tool_output", safeResult);
             }
 
-            // Add tool output back to history for the AI to read next turn
+            // Feed result back to AI history
             Map<String, Object> toolResponse = new HashMap<>();
             toolResponse.put("role", "tool");
             toolResponse.put("tool_call_id", toolCall.id);
@@ -107,32 +124,30 @@ public class ChatController {
             loopCount++;
           }
 
-          // 4. Transition to Final Answer
           if (loopCount >= MAX_ITERATIONS) {
-            sendEvent(emitter, "thinking", "Finalizing response...");
+            sendEvent(emitter, "thinking", "Research concluded. Preparing final answer...");
           }
 
-          // Turn streaming back ON for the final user-facing text
+          // Switch back to streaming for the final user-facing response
           payload.put("stream", true);
 
-          // Subscribe to the stream and pipe chunks directly to our emitter
           externalService.streamChatCompletion(payload).subscribe().with(
               item -> {
-                // Check if the emitter is still active before emitting
                 if (!emitter.isCancelled()) {
                   emitter.emit(formatChunk(item));
                 }
               },
               err -> {
-                sendEvent(emitter, "error", "Final Stream Error: " + err.getMessage());
+                System.err.println("Final stream error: " + err.getMessage());
+                sendEvent(emitter, "error", "Connection lost during final answer.");
                 emitter.complete();
               },
-              emitter::complete // Successfully finish the SSE stream
+              emitter::complete // This safely closes the SSE channel
           );
 
         } catch (Exception e) {
           e.printStackTrace();
-          sendEvent(emitter, "error", "System Error: " + e.getMessage());
+          sendEvent(emitter, "error", "System Error: " + e.getClass().getSimpleName());
           if (!emitter.isCancelled())
             emitter.complete();
         }
@@ -163,10 +178,13 @@ public class ChatController {
   }
 
   private String formatChunk(String chunk) {
-    if (chunk == null || chunk.trim().isEmpty())
+    if (chunk == null)
       return "";
-    if (chunk.startsWith("data:") || chunk.equals("[DONE]"))
-      return chunk + "\n\n";
+    String c = chunk.trim();
+    if (c.isEmpty())
+      return "";
+    if (c.startsWith("data:") || c.equals("[DONE]"))
+      return c + "\n\n";
     return "data: " + chunk + "\n\n";
   }
 }

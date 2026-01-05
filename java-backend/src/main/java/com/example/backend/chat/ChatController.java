@@ -37,6 +37,9 @@ public class ChatController {
     return Multi.createFrom().emitter(emitter -> {
       Infrastructure.getDefaultWorkerPool().execute(() -> {
         try {
+          // Memory to track URLs visited in THIS specific reasoning loop
+          Set<String> seenUrls = new HashSet<>();
+
           sendEvent(emitter, "thinking", "Analyzing request...");
 
           @SuppressWarnings("unchecked")
@@ -46,6 +49,8 @@ public class ChatController {
             payload.put("messages", messages);
           }
 
+          // Disable streaming during the reasoning loops to handle tool calls
+          // synchronously
           payload.put("stream", false);
 
           int loopCount = 0;
@@ -71,9 +76,8 @@ public class ChatController {
             assistantHistoryEntry.put("tool_calls", aiMessage.tool_calls);
             messages.add(assistantHistoryEntry);
 
-            // --- SEQUENTIAL LOGIC START ---
-            // Instead of a for-loop, we only execute the FIRST tool call.
-            // This forces the AI to "think" again after each individual result.
+            // --- SEQUENTIAL REASONING START ---
+            // We execute only the FIRST tool call to force step-by-step thinking
             ChatResponse.ToolCall toolCall = aiMessage.tool_calls.get(0);
             String toolName = toolCall.function.name;
             String uiTarget = "web";
@@ -90,27 +94,42 @@ public class ChatController {
 
             sendEvent(emitter, "tool_start", uiTarget);
 
-            String result = toolExecutor.execute(toolCall.function);
+            // Pass the seenUrls to the executor to filter results
+            String result = toolExecutor.execute(toolCall.function, seenUrls);
             String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
+
+            // Extract the URL from the result to add it to our "seen" memory
+            try {
+              List<Map<String, Object>> resultData = objectMapper.readValue(safeResult, new TypeReference<>() {
+              });
+              if (!resultData.isEmpty()) {
+                String url = (String) resultData.get(0).get("url");
+                if (url != null) {
+                  seenUrls.add(url);
+                }
+              }
+            } catch (Exception e) {
+              // If it's not a list (error message), we just move on
+            }
 
             if ("web_search".equals(toolName)) {
               sendEvent(emitter, "tool_output", safeResult);
             }
 
-            // Add the tool's result to history
+            // Add the tool's result back to history so the AI can read it in the next loop
             Map<String, Object> toolResponse = new HashMap<>();
             toolResponse.put("role", "tool");
             toolResponse.put("tool_call_id", toolCall.id);
             toolResponse.put("content", safeResult);
             messages.add(toolResponse);
-            // --- SEQUENTIAL LOGIC END ---
+            // --- SEQUENTIAL REASONING END ---
 
             sendEvent(emitter, "thinking", "Analyzing results...");
             loopCount++;
           }
 
           if (loopCount >= MAX_ITERATIONS) {
-            sendEvent(emitter, "error", "Iteration limit reached.");
+            sendEvent(emitter, "error", "Deep research limit reached. Formulating final answer.");
           }
 
           // Finally, stream the actual text response back to the user

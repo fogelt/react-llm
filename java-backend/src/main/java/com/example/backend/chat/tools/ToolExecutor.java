@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.backend.chat.ChatResponse;
 import java.util.Map;
+import java.util.Set;
 import java.lang.reflect.Method;
 
 @ApplicationScoped
@@ -18,7 +19,7 @@ public class ToolExecutor {
   @Inject
   ObjectMapper objectMapper;
 
-  public String execute(ChatResponse.Function function) {
+  public String execute(ChatResponse.Function function, Set<String> seenUrls) {
     String name = function.name;
     try {
       Object rawArgs = function.arguments;
@@ -35,8 +36,18 @@ public class ToolExecutor {
         return "Error: Unsupported arguments format for tool: " + name;
       }
 
-      Method method = registry.getClass().getMethod(name, Map.class);
-      return (String) method.invoke(registry, arguments);
+      // --- DYNAMIC METHOD RESOLUTION ---
+      try {
+        // First, try to find a method that accepts both arguments AND the seenUrls set
+        // (e.g., web_search)
+        Method method = registry.getClass().getMethod(name, Map.class, Set.class);
+        return (String) method.invoke(registry, arguments, seenUrls);
+      } catch (NoSuchMethodException e) {
+        // Fallback: If the method doesn't care about seenUrls, just call it with
+        // arguments
+        Method method = registry.getClass().getMethod(name, Map.class);
+        return (String) method.invoke(registry, arguments);
+      }
 
     } catch (NoSuchMethodException | SecurityException e) {
       return "Error: Tool '" + name + "' is not implemented in ToolRegistry.";

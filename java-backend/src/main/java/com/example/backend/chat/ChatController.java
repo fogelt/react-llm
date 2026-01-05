@@ -37,9 +37,7 @@ public class ChatController {
     return Multi.createFrom().emitter(emitter -> {
       Infrastructure.getDefaultWorkerPool().execute(() -> {
         try {
-          // Track URLs to ensure the AI finds NEW info each loop
           Set<String> seenUrls = new HashSet<>();
-
           sendEvent(emitter, "thinking", "Analyzing request...");
 
           @SuppressWarnings("unchecked")
@@ -49,107 +47,85 @@ public class ChatController {
             payload.put("messages", messages);
           }
 
-          // Perform research steps synchronously
+          // RESEARCH PHASE (Synchronous)
           payload.put("stream", false);
-
           int loopCount = 0;
           final int MAX_ITERATIONS = 5;
 
           while (loopCount < MAX_ITERATIONS) {
             ChatResponse response = externalService.getChatCompletion(payload);
-
-            if (response == null || response.choices == null || response.choices.isEmpty()) {
+            if (response == null || response.choices == null || response.choices.isEmpty())
               break;
-            }
 
             ChatResponse.Message aiMessage = response.choices.get(0).message;
-
-            // No more tools? AI is ready to answer.
-            if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty()) {
+            if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty())
               break;
-            }
 
-            // Log assistant's intent
+            // Add assistant intent
             Map<String, Object> assistantHistoryEntry = new HashMap<>();
             assistantHistoryEntry.put("role", "assistant");
             assistantHistoryEntry.put("tool_calls", aiMessage.tool_calls);
             messages.add(assistantHistoryEntry);
 
-            // Execute ONLY the first tool call to force sequential reasoning
+            // Execute ONLY the first tool call
             ChatResponse.ToolCall toolCall = aiMessage.tool_calls.get(0);
-            String toolName = toolCall.function.name;
-            String uiTarget = "web";
+            sendEvent(emitter, "tool_start", "web");
 
-            try {
-              Map<String, Object> argsMap = objectMapper.readValue(
-                  toolCall.function.arguments,
-                  new TypeReference<Map<String, Object>>() {
-                  });
-              uiTarget = (String) argsMap.getOrDefault("target", "web");
-            } catch (Exception e) {
-              uiTarget = toolName;
-            }
-
-            sendEvent(emitter, "tool_start", uiTarget);
-
-            // Execute and filter results
             String result = toolExecutor.execute(toolCall.function, seenUrls);
             String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
 
-            // Update seenUrls from the new search result
+            // Track URLs for deduplication
             try {
               List<Map<String, Object>> resultData = objectMapper.readValue(safeResult, new TypeReference<>() {
               });
               if (!resultData.isEmpty()) {
                 String url = (String) resultData.get(0).get("url");
-                if (url != null) {
+                if (url != null)
                   seenUrls.add(url);
-                }
               }
             } catch (Exception ignored) {
             }
 
-            if ("web_search".equals(toolName)) {
-              sendEvent(emitter, "tool_output", safeResult);
-            }
+            sendEvent(emitter, "tool_output", safeResult);
 
-            // Feed result back to AI history
+            // Add tool result to history
             Map<String, Object> toolResponse = new HashMap<>();
             toolResponse.put("role", "tool");
             toolResponse.put("tool_call_id", toolCall.id);
             toolResponse.put("content", safeResult);
             messages.add(toolResponse);
 
-            sendEvent(emitter, "thinking", "Analyzing results...");
             loopCount++;
+            sendEvent(emitter, "thinking", "Analyzing results (Step " + loopCount + ")...");
           }
 
-          if (loopCount >= MAX_ITERATIONS) {
-            sendEvent(emitter, "thinking", "Research concluded. Preparing final answer...");
-          }
+          // FINAL RESPONSE PHASE (Streaming)
+          sendEvent(emitter, "thinking", "Formulating final answer...");
 
-          // Switch back to streaming for the final user-facing response
+          // Critical: Ensure we tell the model to finish the conversation
           payload.put("stream", true);
 
-          externalService.streamChatCompletion(payload).subscribe().with(
-              item -> {
-                if (!emitter.isCancelled()) {
-                  emitter.emit(formatChunk(item));
-                }
-              },
-              err -> {
-                System.err.println("Final stream error: " + err.getMessage());
-                sendEvent(emitter, "error", "Connection lost during final answer.");
-                emitter.complete();
-              },
-              emitter::complete // This safely closes the SSE channel
-          );
+          // We use await().indefinitely() logic inside the worker thread
+          // to pipe the stream to the emitter correctly.
+          externalService.streamChatCompletion(payload)
+              .subscribe().with(
+                  item -> {
+                    if (!emitter.isCancelled()) {
+                      emitter.emit(formatChunk(item));
+                    }
+                  },
+                  err -> {
+                    System.err.println("Stream Error: " + err.getMessage());
+                    emitter.complete();
+                  },
+                  () -> {
+                    emitter.complete();
+                  });
 
         } catch (Exception e) {
           e.printStackTrace();
-          sendEvent(emitter, "error", "System Error: " + e.getClass().getSimpleName());
-          if (!emitter.isCancelled())
-            emitter.complete();
+          sendEvent(emitter, "error", "System Error: " + e.getMessage());
+          emitter.complete();
         }
       });
     });
@@ -162,7 +138,6 @@ public class ChatController {
       Map<String, Object> delta = new HashMap<>();
       delta.put("used_tool", true);
       delta.put("status", status);
-
       if ("tool_output".equals(status)) {
         delta.put("content", content);
       } else {
@@ -178,13 +153,10 @@ public class ChatController {
   }
 
   private String formatChunk(String chunk) {
-    if (chunk == null)
+    if (chunk == null || chunk.trim().isEmpty())
       return "";
-    String c = chunk.trim();
-    if (c.isEmpty())
-      return "";
-    if (c.startsWith("data:") || c.equals("[DONE]"))
-      return c + "\n\n";
+    if (chunk.startsWith("data:") || chunk.equals("[DONE]"))
+      return chunk + "\n\n";
     return "data: " + chunk + "\n\n";
   }
 }

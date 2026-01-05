@@ -49,8 +49,9 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
           const isAssistant = m.role === 'assistant';
           const hasContent = m.content && m.content.trim().length > 0;
 
-          // Updated logic: Show the badge if a tool was used, even if content exists (so sources stay visible)
-          const showToolBadge = isAssistant && m.usedTool;
+          // Tool badge shows only when no content is present yet
+          const showToolBadge = isAssistant && m.usedTool && (!m.content || m.content.length === 0);
+
           const hasAttachment = isUser && ((m.images && m.images.length > 0) || m.extraContext);
           const theme = getToolTheme(m.toolName);
 
@@ -65,10 +66,9 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                   ${m.isError ? 'border border-red-500/50 bg-red-500/5 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'border-none'}
                 `}
               >
-                {/* DYNAMIC TOOL BADGE & PERSISTENT SOURCES */}
-                {showToolBadge && (
-                  <div className="flex items-center gap-3 mb-2">
-                    {/* The Working Indicator (Thinking Text) */}
+                {/* STATUS BAR: TOOL BADGE & SOURCES */}
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  {showToolBadge && (
                     <div className={`
                         ${badgeBaseClass} mb-0
                         ${m.isError ? 'bg-red-500/20 text-red-400 border border-red-500/40' : theme.color}
@@ -84,32 +84,48 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                         {m.isError ? (m.toolName || 'Error') : (m.toolStatus === 'thinking' ? getThinkingText(m.toolName) : theme.label)}
                       </span>
                     </div>
+                  )}
 
-                    {/* PERSISTENT SOURCE ICONS */}
-                    {m.sources && m.sources.length > 0 && (
-                      <div className="flex items-center gap-1.5 pl-2 border-l border-white/10 animate-in fade-in slide-in-from-left-2 duration-500">
-                        {m.sources.map((source, idx) => (
+                  {/* SOURCES SECTION - Persistent icons */}
+                  {m.sources && m.sources.length > 0 && (
+                    <div className={`flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 duration-500 ${showToolBadge ? 'pl-2 border-l border-white/10' : ''}`}>
+                      {m.sources.map((source, idx) => {
+                        // Safety logic to prevent Invalid URL crashes
+                        if (!source.url || source.url === "No URL") return null;
+
+                        let hostname = "";
+                        try {
+                          const validUrl = source.url.startsWith('http') ? source.url : `https://${source.url}`;
+                          hostname = new URL(validUrl).hostname;
+                        } catch (e) {
+                          return null;
+                        }
+
+                        return (
                           <a
                             key={idx}
-                            href={source.url}
+                            href={source.url.startsWith('http') ? source.url : `https://${source.url}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             title={source.title}
-                            className="transition-transform hover:scale-125"
+                            className="transition-transform hover:scale-125 block h-3.5"
                           >
                             <img
-                              src={`https://www.google.com/s2/favicons?domain=${new URL(source.url).hostname}&sz=32`}
+                              src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
                               className="w-3.5 h-3.5 rounded-sm grayscale-[0.3] hover:grayscale-0 shadow-sm"
                               alt="source"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://www.google.com/s2/favicons?domain=duckduckgo.com";
+                              }}
                             />
                           </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                {/* ATTACHMENT BADGE (stays the same) */}
+                {/* ATTACHMENT BADGE */}
                 {hasAttachment && (
                   <div className={`${badgeBaseClass} bg-emerald-500/10 text-emerald-300 ml-auto`}>
                     <span className="material-icons !text-[12px] animate-pulse">attach_file</span>
@@ -117,13 +133,14 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                   </div>
                 )}
 
-                {/* IMAGE PREVIEW (stays the same) */}
+                {/* IMAGE PREVIEW */}
                 {m.images && m.images.length > 0 && isUser && (
                   <div className="my-2 border border-white/10 rounded-md overflow-hidden shadow-lg">
                     <img src={m.images[0]} alt="Attached preview" className="max-w-full h-auto object-cover max-h-[180px]" />
                   </div>
                 )}
 
+                {/* MESSAGE CONTENT */}
                 <div>
                   {hasContent ? (
                     <div className={m.isError ? "text-red-200/80" : ""}>
@@ -135,6 +152,8 @@ export function MessageList({ messages, bottomRef }: MessageListProps) {
                       <span className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:-0.15s]"></span>
                       <span className="w-1 h-1 bg-white rounded-full animate-bounce"></span>
                     </div>
+                  ) : m.isError && !hasContent ? (
+                    <p className="text-[11px] text-red-400 italic">The operation could not be completed.</p>
                   ) : null}
                 </div>
               </div>

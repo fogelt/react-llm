@@ -48,7 +48,6 @@ public class ChatController {
 
           payload.put("stream", false);
 
-          List<String> usedTools = new ArrayList<>();
           int loopCount = 0;
           final int MAX_ITERATIONS = 5;
 
@@ -61,45 +60,50 @@ public class ChatController {
 
             ChatResponse.Message aiMessage = response.choices.get(0).message;
 
+            // If no tool calls, the AI is ready to give the final answer
             if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty()) {
               break;
             }
 
+            // Add the assistant's intent to call tools to history
             Map<String, Object> assistantHistoryEntry = new HashMap<>();
             assistantHistoryEntry.put("role", "assistant");
             assistantHistoryEntry.put("tool_calls", aiMessage.tool_calls);
             messages.add(assistantHistoryEntry);
 
-            // Execute each tool call
-            for (ChatResponse.ToolCall toolCall : aiMessage.tool_calls) {
-              String toolName = toolCall.function.name;
-              String uiTarget = "web"; // Default label
+            // --- SEQUENTIAL LOGIC START ---
+            // Instead of a for-loop, we only execute the FIRST tool call.
+            // This forces the AI to "think" again after each individual result.
+            ChatResponse.ToolCall toolCall = aiMessage.tool_calls.get(0);
+            String toolName = toolCall.function.name;
+            String uiTarget = "web";
 
-              try {
-                Map<String, Object> argsMap = objectMapper.readValue(
-                    toolCall.function.arguments,
-                    new TypeReference<Map<String, Object>>() {
-                    });
-                uiTarget = (String) argsMap.getOrDefault("target", "web");
-              } catch (Exception e) {
-                uiTarget = toolName;
-              }
-
-              sendEvent(emitter, "tool_start", uiTarget);
-
-              String result = toolExecutor.execute(toolCall.function);
-              String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
-
-              if ("web_search".equals(toolName)) {
-                sendEvent(emitter, "tool_output", safeResult);
-              }
-
-              Map<String, Object> toolResponse = new HashMap<>();
-              toolResponse.put("role", "tool");
-              toolResponse.put("tool_call_id", toolCall.id);
-              toolResponse.put("content", safeResult);
-              messages.add(toolResponse);
+            try {
+              Map<String, Object> argsMap = objectMapper.readValue(
+                  toolCall.function.arguments,
+                  new TypeReference<Map<String, Object>>() {
+                  });
+              uiTarget = (String) argsMap.getOrDefault("target", "web");
+            } catch (Exception e) {
+              uiTarget = toolName;
             }
+
+            sendEvent(emitter, "tool_start", uiTarget);
+
+            String result = toolExecutor.execute(toolCall.function);
+            String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
+
+            if ("web_search".equals(toolName)) {
+              sendEvent(emitter, "tool_output", safeResult);
+            }
+
+            // Add the tool's result to history
+            Map<String, Object> toolResponse = new HashMap<>();
+            toolResponse.put("role", "tool");
+            toolResponse.put("tool_call_id", toolCall.id);
+            toolResponse.put("content", safeResult);
+            messages.add(toolResponse);
+            // --- SEQUENTIAL LOGIC END ---
 
             sendEvent(emitter, "thinking", "Analyzing results...");
             loopCount++;
@@ -109,10 +113,7 @@ public class ChatController {
             sendEvent(emitter, "error", "Iteration limit reached.");
           }
 
-          if (!usedTools.isEmpty()) {
-            sendEvent(emitter, "completed", String.join(", ", usedTools));
-          }
-
+          // Finally, stream the actual text response back to the user
           payload.put("stream", true);
           externalService.streamChatCompletion(payload).subscribe().with(
               item -> emitter.emit(formatChunk(item)),
@@ -138,7 +139,6 @@ public class ChatController {
       delta.put("used_tool", true);
       delta.put("status", status);
 
-      // Use 'tool_name' for status updates, use 'content' for the actual search data
       if ("tool_output".equals(status)) {
         delta.put("content", content);
       } else {

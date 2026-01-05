@@ -3,22 +3,26 @@ export const availableTools = [
     type: "function",
     function: {
       name: "web_search",
-      description: "Searches the internet for real-time information, current events, and facts. Use 'target: wikipedia' for factual deep-dives and 'target: reddit' for community opinions or discussions.",
+      description: "Search the internet for real-time info. IMPORTANT: Use ONE search at a time to reason through complex questions. Analyze the result before deciding if another search is needed.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
-            description: "The search keywords (e.g., 'latest space news' or 'how to fix a leaky faucet')"
+            description: "Specific, targeted search keywords. Avoid broad terms; be precise to get the best snippet."
           },
           target: {
             type: "string",
             enum: ["web", "reddit", "wikipedia"],
             default: "web",
-            description: "Choose 'reddit' for community threads, 'wikipedia' for facts, or 'web' for general search."
+            description: "Choose 'reddit' for community opinions, 'wikipedia' for encyclopedia facts, or 'web' for general news/sites."
+          },
+          reasoning: {
+            type: "string",
+            description: "Briefly state why this specific search is necessary for the current step of your investigation."
           }
         },
-        required: ["query"]
+        required: ["query", "reasoning"]
       }
     }
   }

@@ -114,14 +114,19 @@ export function ChatBox({ messages, setMessages, onChatSaved, contextLimit, isLo
             return updated;
           });
         },
-        (sources: any[]) => {
+        (newSources: any[]) => {
           setMessages((prev) => {
             const updated = [...prev];
-            if (updated.length > 0) {
-              const lastIndex = updated.length - 1;
+            const lastIndex = updated.length - 1;
+            if (lastIndex < 0) return prev;
+            const currentSources = updated[lastIndex].sources || [];
+            const uniqueNew = newSources.filter(
+              ns => !currentSources.some(cs => cs.url === ns.url)
+            );
+            if (uniqueNew.length > 0) {
               updated[lastIndex] = {
                 ...updated[lastIndex],
-                sources: sources
+                sources: [...currentSources, ...uniqueNew]
               };
               saveChat(updated, contextUsage, chatId);
             }

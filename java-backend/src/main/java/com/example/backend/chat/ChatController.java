@@ -37,9 +37,8 @@ public class ChatController {
     return Multi.createFrom().emitter(emitter -> {
       Infrastructure.getDefaultWorkerPool().execute(() -> {
         try {
-          // Memory to track URLs visited in THIS specific reasoning loop
+          // 1. Initialize logic
           Set<String> seenUrls = new HashSet<>();
-
           sendEvent(emitter, "thinking", "Analyzing request...");
 
           @SuppressWarnings("unchecked")
@@ -49,110 +48,101 @@ public class ChatController {
             payload.put("messages", messages);
           }
 
-          // Disable streaming during the reasoning loops to handle tool calls
-          // synchronously
+          // Synchronous research phase
           payload.put("stream", false);
-
           int loopCount = 0;
           final int MAX_ITERATIONS = 5;
 
+          // 2. Reasoning Loop
           while (loopCount < MAX_ITERATIONS) {
             ChatResponse response = externalService.getChatCompletion(payload);
-
-            if (response == null || response.choices == null || response.choices.isEmpty()) {
+            if (response == null || response.choices == null || response.choices.isEmpty())
               break;
-            }
 
             ChatResponse.Message aiMessage = response.choices.get(0).message;
-
-            // If no tool calls, the AI is ready to give the final answer
-            if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty()) {
+            if (aiMessage.tool_calls == null || aiMessage.tool_calls.isEmpty())
               break;
-            }
 
-            // Add the assistant's intent to call tools to history
+            // Add AI's intent to message history
             Map<String, Object> assistantHistoryEntry = new HashMap<>();
             assistantHistoryEntry.put("role", "assistant");
             assistantHistoryEntry.put("tool_calls", aiMessage.tool_calls);
             messages.add(assistantHistoryEntry);
 
-            // --- SEQUENTIAL REASONING START ---
-            // We execute only the FIRST tool call to force step-by-step thinking
+            // Execute the FIRST tool call (Sequential reasoning)
             ChatResponse.ToolCall toolCall = aiMessage.tool_calls.get(0);
             String toolName = toolCall.function.name;
-            String uiTarget = "web";
 
-            try {
-              Map<String, Object> argsMap = objectMapper.readValue(
-                  toolCall.function.arguments,
-                  new TypeReference<Map<String, Object>>() {
-                  });
-              uiTarget = (String) argsMap.getOrDefault("target", "web");
-            } catch (Exception e) {
-              uiTarget = toolName;
-            }
+            // Notify UI that a tool has started
+            sendEvent(emitter, "tool_start", "web");
 
-            sendEvent(emitter, "tool_start", uiTarget);
-
-            // Pass the seenUrls to the executor to filter results
             String result = toolExecutor.execute(toolCall.function, seenUrls);
             String safeResult = (result == null || result.isBlank()) ? "No results found." : result;
 
-            // Extract the URL from the result to add it to our "seen" memory
+            // Update URL memory for deduplication
             try {
               List<Map<String, Object>> resultData = objectMapper.readValue(safeResult, new TypeReference<>() {
               });
               if (!resultData.isEmpty()) {
                 String url = (String) resultData.get(0).get("url");
-                if (url != null) {
+                if (url != null)
                   seenUrls.add(url);
-                }
               }
-            } catch (Exception e) {
-              // If it's not a list (error message), we just move on
+            } catch (Exception ignored) {
             }
 
+            // Send the tool results to the UI to update icons
             if ("web_search".equals(toolName)) {
               sendEvent(emitter, "tool_output", safeResult);
             }
 
-            // Add the tool's result back to history so the AI can read it in the next loop
+            // Add tool output back to history for the AI to read next turn
             Map<String, Object> toolResponse = new HashMap<>();
             toolResponse.put("role", "tool");
             toolResponse.put("tool_call_id", toolCall.id);
             toolResponse.put("content", safeResult);
             messages.add(toolResponse);
-            // --- SEQUENTIAL REASONING END ---
 
             sendEvent(emitter, "thinking", "Analyzing results...");
             loopCount++;
           }
 
+          // 4. Transition to Final Answer
           if (loopCount >= MAX_ITERATIONS) {
-            sendEvent(emitter, "error", "Deep research limit reached. Formulating final answer.");
+            sendEvent(emitter, "thinking", "Finalizing response...");
           }
 
-          // Finally, stream the actual text response back to the user
+          // Turn streaming back ON for the final user-facing text
           payload.put("stream", true);
+
+          // Subscribe to the stream and pipe chunks directly to our emitter
           externalService.streamChatCompletion(payload).subscribe().with(
-              item -> emitter.emit(formatChunk(item)),
+              item -> {
+                // Check if the emitter is still active before emitting
+                if (!emitter.isCancelled()) {
+                  emitter.emit(formatChunk(item));
+                }
+              },
               err -> {
-                System.err.println("Streaming error: " + err.getMessage());
-                sendEvent(emitter, "error", "Stream Failure: " + err.getMessage());
+                sendEvent(emitter, "error", "Final Stream Error: " + err.getMessage());
                 emitter.complete();
               },
-              emitter::complete);
+              emitter::complete // Successfully finish the SSE stream
+          );
 
         } catch (Exception e) {
           e.printStackTrace();
-          sendEvent(emitter, "error", "System Error: " + e.getClass().getSimpleName());
-          emitter.complete();
+          sendEvent(emitter, "error", "System Error: " + e.getMessage());
+          if (!emitter.isCancelled())
+            emitter.complete();
         }
       });
     });
   }
 
   private void sendEvent(MultiEmitter<? super String> emitter, String status, String content) {
+    if (emitter.isCancelled())
+      return;
     try {
       Map<String, Object> delta = new HashMap<>();
       delta.put("used_tool", true);
@@ -164,29 +154,19 @@ public class ChatController {
         delta.put("tool_name", content);
       }
 
-      Map<String, Object> choice = new HashMap<>();
-      choice.put("delta", delta);
+      Map<String, Object> envelope = Collections.singletonMap("choices",
+          Collections.singletonList(Collections.singletonMap("delta", delta)));
 
-      Map<String, Object> envelope = new HashMap<>();
-      envelope.put("choices", Collections.singletonList(choice));
-
-      String json = objectMapper.writeValueAsString(envelope);
-      emitter.emit("data: " + json + "\n\n");
-    } catch (Exception e) {
-      emitter.emit("data: {\"error\": \"Failed to serialize event\"}\n\n");
+      emitter.emit("data: " + objectMapper.writeValueAsString(envelope) + "\n\n");
+    } catch (Exception ignored) {
     }
   }
 
   private String formatChunk(String chunk) {
-    if (chunk == null)
+    if (chunk == null || chunk.trim().isEmpty())
       return "";
-    String c = chunk.trim();
-    if (c.isEmpty())
-      return "";
-    if (c.startsWith("data:"))
-      return c + "\n\n";
-    if (c.equals("[DONE]"))
-      return "data: [DONE]\n\n";
+    if (chunk.startsWith("data:") || chunk.equals("[DONE]"))
+      return chunk + "\n\n";
     return "data: " + chunk + "\n\n";
   }
 }

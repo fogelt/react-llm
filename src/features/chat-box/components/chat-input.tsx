@@ -1,6 +1,7 @@
-import { ChangeEvent, FormEvent, useRef } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef } from "react";
 import { CircleButton } from "@/components/ui";
 import { TextInput } from "@/components/ui";
+import { useWhisper } from "@/hooks";
 
 type ChatInputProps = {
   value: string;
@@ -15,6 +16,23 @@ type ChatInputProps = {
 
 export function ChatInput({ value, onChange, onSend, onStop, isLoading = false, onUpload, hasAttachment, onRemoveAttachment }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const latestValue = useRef(value);
+
+  useEffect(() => {
+    latestValue.current = value;
+  }, [value]);
+
+  const { isRecording, toggleRecording } = useWhisper((transcript) => {
+    const currentValue = latestValue.current;
+    if (currentValue.endsWith(transcript)) return;
+    const separator = currentValue.length > 0 && !currentValue.endsWith(" ") ? " " : "";
+    const newValue = currentValue + separator + transcript;
+
+    onChange({
+      target: { value: newValue }
+    } as React.ChangeEvent<HTMLInputElement>);
+  });
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -82,6 +100,13 @@ export function ChatInput({ value, onChange, onSend, onStop, isLoading = false, 
           <span className="material-icons !text-[16px]" aria-hidden>close</span>
         ) : (
           <span className="material-icons !text-[16px]" aria-hidden>add</span>
+        )}
+      </CircleButton>
+      <CircleButton className="right-[50px]" onClick={toggleRecording}>
+        {isRecording ? (
+          <span className="material-icons !text-[18px] translate-x-px text-red-500 animate-pulse" aria-hidden>mic_off</span>
+        ) : (
+          <span className="material-icons !text-[18px] translate-x-px" aria-hidden>mic</span>
         )}
       </CircleButton>
       <CircleButton

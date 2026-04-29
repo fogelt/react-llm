@@ -1,9 +1,9 @@
 import React from 'react';
 
-interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface TextInputProps extends React.InputHTMLAttributes<HTMLTextAreaElement> {
 }
 
-const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
+const TextInput = React.forwardRef<HTMLTextAreaElement, TextInputProps>(
   ({ className, ...props }, ref) => {
 
     const baseClasses = `
@@ -25,7 +25,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
     const mergedClasses = `${baseClasses} ${focusClasses} ${className || ''}`;
 
     return (
-      <input
+      <textarea
         ref={ref}
         type="text"
         className={mergedClasses}

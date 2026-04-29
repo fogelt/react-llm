@@ -5,7 +5,7 @@ import { useWhisper } from "@/hooks";
 
 type ChatInputProps = {
   value: string;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
   onSend: () => void;
   onStop?: () => void;
   isLoading?: boolean;
@@ -31,7 +31,7 @@ export function ChatInput({ value, onChange, onSend, onStop, isLoading = false, 
 
     onChange({
       target: { value: newValue }
-    } as React.ChangeEvent<HTMLInputElement>);
+    } as React.ChangeEvent<HTMLTextAreaElement>);
   });
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -84,7 +84,7 @@ export function ChatInput({ value, onChange, onSend, onStop, isLoading = false, 
         onChange={onChange}
         placeholder={hasAttachment ? "Add context or hit Send..." : "Type your message..."}
         disabled={isLoading}
-        className={'pr-[3.8rem] pl-[3.6rem]'}
+        className={'pr-[5.8rem] pl-[3.6rem] h-30 resize-none overflow-y-auto'}
         aria-label="Message"
       />
 

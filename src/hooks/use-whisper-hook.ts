@@ -1,40 +1,87 @@
 import { useState, useRef, useCallback } from "react";
-import { whisperService } from "@/features/chat-box/api/whisper-service";
 
 export function useWhisper(onTranscript: (text: string) => void) {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const intervalRef = useRef<number | null>(null);
 
-  const startRecording = useCallback(async () => {
+  const sequenceRef = useRef(0);
+  const nextExpectedRef = useRef(0);
+  const pendingResults = useRef<Map<number, string>>(new Map());
+
+  const handleOrderedResult = useCallback((id: number, text: string) => {
+    pendingResults.current.set(id, text);
+
+    while (pendingResults.current.has(nextExpectedRef.current)) {
+      const textToPublish = pendingResults.current.get(nextExpectedRef.current);
+      if (textToPublish !== undefined) {
+        onTranscript(textToPublish);
+      }
+
+      pendingResults.current.delete(nextExpectedRef.current);
+      nextExpectedRef.current++;
+    }
+  }, [onTranscript]);
+
+  const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, sampleRate: 16000 }
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      whisperService.connect(onTranscript);
+      sequenceRef.current = 0;
+      nextExpectedRef.current = 0;
+      pendingResults.current.clear();
 
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const captureChunk = () => {
+        const currentId = sequenceRef.current++;
+        const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          whisperService.sendAudio(event.data);
-        }
+        recorder.ondataavailable = async (event) => {
+          if (event.data.size > 0) {
+            const formData = new FormData();
+            const audioBlob = new Blob([event.data], { type: 'audio/webm' });
+            formData.append('file', audioBlob, 'chunk.webm');
+
+            try {
+              const response = await fetch(`http://100.76.127.80:8000/transcribe?sequence_id=${currentId}`, {
+                method: 'POST',
+                body: formData,
+              });
+
+              const data = await response.json();
+              handleOrderedResult(data.sequence_id, data.text);
+            } catch (err) {
+              console.error(`Chunk ${currentId} failed:`, err);
+            }
+          }
+        };
+
+        recorder.start();
+        setTimeout(() => {
+          if (recorder.state === "recording") {
+            recorder.stop();
+          }
+        }, 3000);
       };
 
-      recorder.start(1000);
-      mediaRecorderRef.current = recorder;
+      // Start initial chunk and set interval
+      captureChunk();
+      intervalRef.current = window.setInterval(captureChunk, 3000);
+
       setIsRecording(true);
     } catch (err) {
       console.error("Mic access denied", err);
     }
-  }, [onTranscript]);
+  };
 
   const stopRecording = useCallback(() => {
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
     if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
     }
-    whisperService.disconnect();
     setIsRecording(false);
   }, []);
 
